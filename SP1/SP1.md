@@ -1,3 +1,8 @@
+---
+layout: default
+title: SP1 
+---
+
 # ASOPJ1 — SP1: [Títol de la SP1 / Unitat de Treball]
 
 > **Autor/a:** Razvan Nastasa Ghitau
