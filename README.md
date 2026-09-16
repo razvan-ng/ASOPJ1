@@ -1,8 +1,5 @@
 # ASOPJ1 - Documentació del Mòdul / Projecte
 
-![Versió](https://img.shields.io/badge/versi%C3%B3-1.0.0-blue.svg)
-![Estat](https://img.shields.io/badge/estat-plantilla-green.svg)
-
 ## 📖 Descripció
 [Escriu aquí una descripció general del mòdul o projecte ASOPJ1]
 
