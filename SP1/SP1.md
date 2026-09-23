@@ -260,10 +260,53 @@ L'habilitem al nostre usuari.
 
 ### Pas 7: Crear la reverse shell root.
 
-<img width="599" height="294" alt="image" src="https://github.com/user-attachments/assets/a6b0bed2-a97a-49a4-857c-c271739f816f" />
+<img width="610" height="282" alt="image" src="https://github.com/user-attachments/assets/a73125f0-0342-4bd9-9794-5e0987525fca" />
 
 Primer creem el servei i després passarem a la creació del script.
 
 <img width="610" height="298" alt="image" src="https://github.com/user-attachments/assets/928b35df-da56-47ce-b26f-7d8194047125" />
 
 Creem una reverse shell bàsica, on el host serà la màquina atacant.
+
+<img width="642" height="117" alt="image" src="https://github.com/user-attachments/assets/d92e1009-7952-4e25-917c-ebb955043980" />
+
+Configurem els permissos d'execució del script i reiniciem el dimoni i activem el servei a l'arrancada del sistema. 
+
+### Pas 8. Comprovació de reverse shell.
+
+<img width="298" height="58" alt="image" src="https://github.com/user-attachments/assets/7fa338dd-55d5-4d83-a56d-2edc6186d2ec" />
+
+Reiniciem la màquina
+
+<img width="344" height="74" alt="image" src="https://github.com/user-attachments/assets/0356e1ef-097b-4ef4-b18c-966a9a5a532f" />
+
+Un cop reiniciada la màquina comprovem el target per default que tenim. Podem veure que s'ha aplicat el nostre target correctament.
+
+<img width="654" height="449" alt="image" src="https://github.com/user-attachments/assets/a44ceebe-cfbd-43f8-9ce2-b883e28a74f6" />
+
+Comprovem que el servei per al server TigerVNC està viu.
+
+<img width="755" height="311" alt="image" src="https://github.com/user-attachments/assets/b429e416-9821-47a7-b488-74fa4bc2e24c" />
+
+Comproves també que el servei d'SSH s'ha iniciat. Podem veure que hi ha hagut un error (ens ha retornat error 1). Això és degut a que no hi havia ningú escoltant a la IP que hem assignat al número de port. Si abans de reiniciar la màquina encenem una escolta amb _netcat_ ja no tindrem aquesta fallada.
+
+<img width="270" height="67" alt="image" src="https://github.com/user-attachments/assets/643d8ff4-4c32-46c7-a61c-ec50cccac7da" />
+
+Encenem l'escolta al host (màquina atacant) i reiniciem la VM posteriorment.
+
+<img width="795" height="311" alt="image" src="https://github.com/user-attachments/assets/76a8f5ac-4c3f-4b34-8692-fb19d4919080" />
+
+Ara veiem que el servei s'ha iniciat correctament.
+
+<img width="629" height="207" alt="image" src="https://github.com/user-attachments/assets/0c0562fd-62c2-4d0c-8954-b417ceea29c6" />
+
+I al host veiem que tenim accés al terminal de la màquina virtual.
+
+### Pas 9. Comprovació de server TigerVNC
+
+<img width="450" height="183" alt="image" src="https://github.com/user-attachments/assets/270a5365-54ab-42b7-abda-d5a6a0d98b38" />
+
+Obrim el programa de TigerVNC (l'haurem de tenir instal·lat al host prèviament) i introduïm la IP de la víctima i el nº de port adient.
+
+
+
