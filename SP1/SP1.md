@@ -238,4 +238,32 @@ After=graphical.target
 AllowIsolate=yes
 ```
 
+### Pas 5: Definim el target com default.
 
+<img width="643" height="139" alt="image" src="https://github.com/user-attachments/assets/788ea199-c483-43d5-bb06-27241368ce65" />
+
+```bash
+sudo systemctl set-default razvan.target
+```
+
+### Pas 6: Crear el servei de TigerVNC.
+
+<img width="590" height="335" alt="image" src="https://github.com/user-attachments/assets/3643614b-daed-4e5e-ac54-49dcf2c3be67" />
+
+```bash
+sudo nano /etc/systemd/system/vncserver@.service
+```
+
+<img width="648" height="102" alt="image" src="https://github.com/user-attachments/assets/9685d08b-56d2-4004-9047-192f99f17fb8" />
+
+L'habilitem al nostre usuari.
+
+### Pas 7: Crear la reverse shell root.
+
+<img width="599" height="294" alt="image" src="https://github.com/user-attachments/assets/a6b0bed2-a97a-49a4-857c-c271739f816f" />
+
+Primer creem el servei i després passarem a la creació del script.
+
+<img width="610" height="298" alt="image" src="https://github.com/user-attachments/assets/928b35df-da56-47ce-b26f-7d8194047125" />
+
+Creem una reverse shell bàsica, on el host serà la màquina atacant.
