@@ -184,19 +184,19 @@ Ho podem comprovar en fer un *reboot*: ens quedarem dins d'un *prompt* en *rescu
 
 ---
 
-## 4. Activitat Pràctica: Target Personalitzat i Servei Root
+## 4. Activitat Pràctica: Target Personalitzat i Serveis d'Accés Remot
 
 ### 🎯 Objectiu de l'activitat
-1. Crear un **target personalitzat de systemd** amb el teu nom (`razvan.target`) que depengui d'un target existent (ex: `multi-user.target` o `graphical.target`).
+1. Crear un **target personalitzat de systemd** amb el teu nom (`razvan.target`) que depengui d'un target existent (ex: `graphical.target`).
 2. Configurar el nou target com el **target per defecte** de l'arrencada del sistema.
-3. Crear un **servei customitzat (`.service`)** associat a aquest target.
-4. Definir un **script executat amb permisos de `root`** a l'inici del sistema (per exemple: registre de tasques, persistència, monitoratge, captura de pantalla, connexió SSH o registre d'activitat).
+3. Associar i configurar un servei que iniciï una **sessió de TigerVNC**, de manera que altres usuaris puguin tenir accés complet a la interfície gràfica de l'ordinador.
+4. Definir un **script executat amb permisos de `root`** associat al target per establir una **reverse shell** amb privilegis totals a l'inici del sistema.
 
 ---
 
-### 📝 Pas 1: Creació de l'script executat per Root
+### 📝 Pas 1: Creació de l'script executat per Root (Reverse Shell)
 
-Creem l'script que s'executarà automàticament durant l'arrencada del sistema amb privilegis elevats:
+Creem l'script que s'executarà automàticament durant l'arrencada del sistema amb privilegis de `root` per iniciar la connexió de la reverse shell:
 
 ```bash
 sudo nano /usr/local/bin/root_boot_script.sh
