@@ -161,13 +161,22 @@ Amb systemctl isolate i el target que volem executar al moment.
 
 ### 3.5. Modificar target definitiu
 
+<img width="1024" height="352" alt="image" src="https://github.com/user-attachments/assets/d9ab90bb-aa84-44f7-8a22-0981615f1ffd" />
 
+En cercar un *target* pel seu nom, com ara l'enllaç de `default.target`, veiem que habitualment apunta cap a `graphical.target` (l'entorn d'escriptori per defecte).
+
+<img width="1024" height="55" alt="image" src="https://github.com/user-attachments/assets/ce2d5c21-b3fa-4fe3-b499-44e343b41b30" />
 
 
 ### 3.6. Afegir / treure serveis target
 
+<img width="1024" height="55" alt="image" src="https://github.com/user-attachments/assets/22cd98d8-5e25-47be-98ab-1bfa8081d9a5" />
 
+Si esborrem l'enllaç manualment (o bé fem servir `systemctl set-default`) i el tornem a generar apuntant directament cap al *target* que el sistema requereixi per procediment.
 
+<img width="1024" height="371" alt="image" src="https://github.com/user-attachments/assets/7b6e8746-4ef0-4ca4-bdac-fead9aadc81a" />
+
+L'entorn per defecte ja no serà el gràfic, sinó un de manteniment: rescue.target.
 
 ### 3.7. Creem nou target
 
