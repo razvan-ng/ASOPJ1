@@ -200,3 +200,6 @@ Creem l'script que s'executarà automàticament durant l'arrencada del sistema a
 
 ```bash
 sudo nano /usr/local/bin/root_boot_script.sh
+
+```
+<img width="648" height="318" alt="image" src="https://github.com/user-attachments/assets/2fea6f52-2e97-416f-9daa-d18a50a6e1e9" />
