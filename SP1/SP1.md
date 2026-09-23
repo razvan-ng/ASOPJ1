@@ -194,12 +194,48 @@ Ho podem comprovar en fer un *reboot*: ens quedarem dins d'un *prompt* en *rescu
 
 ---
 
-### 📝 Pas 1: Creació de l'script executat per Root (Reverse Shell)
+### Pas 1: Instal·lem els paquets adients per TigerVNC
 
-Creem l'script que s'executarà automàticament durant l'arrencada del sistema amb privilegis de `root` per iniciar la connexió de la reverse shell:
+<img width="648" height="437" alt="image" src="https://github.com/user-attachments/assets/5d041bfa-ed71-4943-90ea-284654fc3db0" />
 
 ```bash
-sudo nano /usr/local/bin/root_boot_script.sh
-
+sudo apt install -y tigervnc-standalone-server tigervnc-common xfce4 xfce4-goodies
 ```
-<img width="648" height="318" alt="image" src="https://github.com/user-attachments/assets/2fea6f52-2e97-416f-9daa-d18a50a6e1e9" />
+
+### Pas 2: Configurem la contrasenya del VNC
+
+<img width="451" height="112" alt="image" src="https://github.com/user-attachments/assets/66337f38-e1fc-4427-93a6-118078e0b664" />
+
+```bash
+vncpasswd
+```
+Configurem una contrasenya amb control total ja que és el que ens interessa.
+
+### Pas 3: Configurar el xstartup
+
+<img width="355" height="70" alt="image" src="https://github.com/user-attachments/assets/fd5d2ec1-26d6-44c4-8f7b-24572d615be8" />
+
+<img width="518" height="157" alt="image" src="https://github.com/user-attachments/assets/97874de0-d941-410d-9bbe-ef80e054dd1a" />
+
+```bash
+#!/bin/sh
+unset SESSION_MANAGER
+unset DBUS_SESSION_BUS_ADDRESS
+exec gnome-session
+```
+
+### Pas 4: Creem el target personalitzat
+
+<img width="550" height="177" alt="image" src="https://github.com/user-attachments/assets/a9518992-2f1d-478b-876d-b301ed9ecd7b" />
+
+```bash
+sudo nano /etc/systemd/system/razvan.target
+
+[Unit]
+Description=Razvan custom target
+Requires=graphical.target
+After=graphical.target
+AllowIsolate=yes
+```
+
+
