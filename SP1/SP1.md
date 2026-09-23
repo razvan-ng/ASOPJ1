@@ -28,7 +28,6 @@ title: SP1
 * **3.4-** Modificar target provisional
 * **3.5-** Modificar target definitiu
 * **3.6-** Afegir/treure serveis de target
-* **3.7-** Creació d'un nou target
 
 ---
 
@@ -178,9 +177,9 @@ Si esborrem l'enllaç manualment (o bé fem servir `systemctl set-default`) i el
 
 L'entorn per defecte ja no serà el gràfic, sinó un de manteniment: rescue.target.
 
-### 3.7. Creem nou target
+<img width="1024" height="227" alt="image" src="https://github.com/user-attachments/assets/b17baee7-d1f6-4acf-bdb5-99d1175c9855" />
 
-
+Ho podem comprovar en fer un *reboot*: ens quedarem dins d'un *prompt* en *rescue mode* a l'espera de resoldre'l o de cancel·lar la reparació (després revertim els canvis per restaurar-ho).
 
 
 ---
