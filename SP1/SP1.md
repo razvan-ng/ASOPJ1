@@ -316,5 +316,10 @@ I al host veiem que tenim accés al terminal de la màquina virtual.
 
 Obrim el programa de TigerVNC (l'haurem de tenir instal·lat al host prèviament) i introduïm la IP de la víctima i el nº de port adient.
 
+<img width="408" height="207" alt="image" src="https://github.com/user-attachments/assets/23831ec5-9c0d-42ed-93f3-e2f741de9a56" />
 
+Introduïm la contrasenya del VNC.
 
+<img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/3695d1c1-ec00-4d1b-9a40-c486127b919f" />
+
+I ja tindrem imatge.
