@@ -220,16 +220,17 @@ Configurem una contrasenya amb control total ja que és el que ens interessa.
 
 ```bash
 #!/bin/sh
-
 unset SESSION_MANAGER
 unset DBUS_SESSION_BUS_ADDRESS
-
-export XDG_CURRENT_DESKTOP=ubuntu:GNOME
-export XDG_SESSION_DESKTOP=ubuntu
-export GNOME_SHELL_SESSION_MODE=ubuntu
-
-exec dbus-run-session -- gnome-session --session=ubuntu
+export XDG_SESSION_TYPE=x11
+export XDG_CURRENT_DESKTOP=XFCE
+export XDG_SESSION_DESKTOP=xfce
+exec dbus-run-session -- startxfce4
 ```
+
+<img width="829" height="345" alt="image" src="https://github.com/user-attachments/assets/1f77193a-b2d2-4662-ab40-1243aab5b5fc" />
+
+Instal·lem el paquet dbus-x11.
 
 ### Pas 4: Creem el target personalitzat
 
