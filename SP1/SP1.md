@@ -215,13 +215,20 @@ Configurem una contrasenya amb control total ja que és el que ens interessa.
 
 <img width="355" height="70" alt="image" src="https://github.com/user-attachments/assets/fd5d2ec1-26d6-44c4-8f7b-24572d615be8" />
 
-<img width="518" height="157" alt="image" src="https://github.com/user-attachments/assets/97874de0-d941-410d-9bbe-ef80e054dd1a" />
+<img width="466" height="199" alt="image" src="https://github.com/user-attachments/assets/d9ffa2dd-2fac-48f0-8805-7243ccfea8c8" />
+
 
 ```bash
 #!/bin/sh
+
 unset SESSION_MANAGER
 unset DBUS_SESSION_BUS_ADDRESS
-exec gnome-session
+
+export XDG_CURRENT_DESKTOP=ubuntu:GNOME
+export XDG_SESSION_DESKTOP=ubuntu
+export GNOME_SHELL_SESSION_MODE=ubuntu
+
+exec dbus-run-session -- gnome-session --session=ubuntu
 ```
 
 ### Pas 4: Creem el target personalitzat
