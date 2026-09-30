@@ -3,10 +3,37 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{ page.title | default: site.title }}</title>
+  <title>{% if page.title %}{{ page.title }} · {% endif %}ASOPJ1</title>
+  <meta name="description" content="Documentació del mòdul d'Administració de Sistemes Operatius (ASOPJ1) — 2n ASIX.">
+  <link rel="icon" href="data:,">
   <link rel="stylesheet" href="{{ '/css/style.css' | relative_url }}">
 </head>
 <body>
-  {{ content }}
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="{{ '/' | relative_url }}">
+        <span class="brand-mark">&gt;_</span> ASOPJ1
+      </a>
+      <nav class="site-nav">
+        <a href="{{ '/' | relative_url }}"{% if page.url == '/' or page.url == '/index.html' %} class="active"{% endif %}>Inici</a>
+        <a href="{{ '/SP1/SP1.html' | relative_url }}"{% if page.title == 'SP1' %} class="active"{% endif %}>SP1</a>
+        <a href="#" class="disabled" aria-disabled="true">SP2</a>
+        <a href="#" class="disabled" aria-disabled="true">SP3</a>
+        <a href="https://github.com/razvan-ng/ASOPJ1" target="_blank" rel="noopener">GitHub ↗</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap content">
+    {{ content }}
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>Razvan Nastasa Ghitau · ASOPJ1 — Administració de Sistemes Operatius · 2n ASIX ·
+        <a href="https://github.com/razvan-ng/ASOPJ1" target="_blank" rel="noopener">codi font al repositori</a>
+      </p>
+    </div>
+  </footer>
 </body>
 </html>
