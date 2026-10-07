@@ -326,6 +326,8 @@ I ja tindrem imatge.
 
 ## 5. Activitat Pràctica: Servei personalitzat a Windows amb NSSM
 
+### Apartat 1. Reverse Shell amb Powershell sent usuari nt authority\system
+
 <img width="505" height="288" alt="imatge" src="https://github.com/user-attachments/assets/4c37c9e0-e4d6-4482-9e59-7ccdd4253b6c" />
 
 Obrim Powershell com a administrador.
@@ -384,4 +386,6 @@ Iniciem el servei i comprovem que funcioni.
 A services.msc podem veure que el servei està efectivament actiu.
 
 Ara comprovem que la reverse shell funciona reiniciant l'ordinador. Haurem de tenir un nc escoltant al port 4444.
+
+### Apartat 2. Keylogger amb enviament de dades a bot de Telegram.
 
