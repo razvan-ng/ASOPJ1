@@ -1,4 +1,4 @@
-<img width="725" height="51" alt="imatge" src="https://github.com/user-attachments/assets/aba65ee6-fde9-45c2-a8c2-9a3b24a45dc3" />---
+---
 layout: default
 title: SP1
 ---
