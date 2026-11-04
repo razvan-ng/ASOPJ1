@@ -202,7 +202,9 @@ nslookup dc01.razvan.local
 nslookup www.google.com
 </code></pre>
 <img width="800" alt="captura1" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura1.png" /><p>L&#39;usuari és <code>razvan\administrador</code>. El primer <code>nslookup</code> troba el controlador de domini a <code>192.168.56.18</code>, i el segon resol <code>www.google.com</code>, així que els reenviadors funcionen.</p>
-<hr>
+<p>Al servidor obrim l&#39;<strong>Administrador de DNS</strong> (<code>dnsmgmt.msc</code>) i anem a <strong>DC01 › Zonas de búsqueda directa › razvan.local</strong>. A la zona hi ha el registre <code>dc01</code> (i, més endavant, <code>control</code>) que apunta a <code>192.168.56.18</code>.</p>
+<img width="800" alt="captura1b" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura1b.png" /><p>A les propietats de <strong>DC01</strong>, pestanya <strong>Reenviadores</strong>, hi ha les dues adreces: <code>10.0.2.3</code> (el DNS de la xarxa NAT de VirtualBox) i <code>8.8.8.8</code>. El DNS del domini respon el que és seu i pregunta a fora tota la resta.</p>
+<img width="800" alt="captura1b2" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura1b2.png" /><hr>
 <h3>Pas 2: Instal·lem AD CS i creem RAZVAN-CA (Nivell 1)</h3>
 <p>Al servidor instal·lem el rol <strong>Servicios de certificados de Active Directory</strong> i el configurem com a <strong>CA empresarial arrel</strong> anomenada <code>RAZVAN-CA</code>, amb una validesa de 5 anys.</p>
 <pre><code class="language-powershell">Install-WindowsFeature ADCS-Cert-Authority -IncludeManagementTools
@@ -244,14 +246,13 @@ Get-ChildItem Cert:\LocalMachine\My | Format-Table FriendlyName, Subject, Issuer
 <img width="800" alt="captura4b" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura4b.png" /><p>Als certificats autosignats el subjecte i l&#39;emissor són el mateix. Qualsevol pot fabricar-ne un amb qualsevol nom, i per això no serveixen. Després l&#39;esborrem.</p>
 <hr>
 <h3>Pas 6: Creem la plantilla WebServer-SAN (Nivell 4)</h3>
-<p>Dupliquem la plantilla <strong>Servidor web</strong> com a <strong>WebServer-SAN</strong>, amb aquestes opcions:</p>
-<ul>
-<li>Validesa de <strong>2 anys</strong>.</li>
-<li>Nom del subjecte <strong>proporcionat pel sol·licitant</strong> (el posarem nosaltres a la sol·licitud).</li>
-<li><strong>Equipos del dominio</strong>: permís de llegir i inscriure&#39;s.</li>
-<li><strong>Admins. del dominio</strong>: permís de llegir, escriure i inscriure&#39;s.</li>
-</ul>
-<p>Després la publiquem a RAZVAN-CA perquè la pugui fer servir.</p>
+<p>Obrim la <strong>Consola de plantillas de certificado</strong> (<code>certtmpl.msc</code>) i dupliquem la plantilla <strong>Servidor web</strong> com a <strong>WebServer-SAN</strong>. A les propietats de la plantilla nova revisem cada pestanya.</p>
+<p>A <strong>General</strong>, el nom és <code>WebServer-SAN</code>, el <strong>Período de validez</strong> és de <strong>2 años</strong> i <em>Publicar certificado en Active Directory</em> queda desmarcat.</p>
+<img width="800" alt="captura5a_general" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura5a_general.png" /><p>A <strong>Compatibilidad</strong>, l&#39;entitat de certificació és <strong>Windows Server 2016</strong> i el destinatari <strong>Windows 10/Windows Server 2016</strong>.</p>
+<img width="800" alt="captura5a_compat" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura5a_compat.png" /><p>A <strong>Nombre del sujeto</strong> està marcat <strong>Proporcionado por el solicitante</strong>: el nom l&#39;escriurem nosaltres a la sol·licitud.</p>
+<img width="800" alt="captura5a_subjecte" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura5a_subjecte.png" /><p>A <strong>Seguridad</strong>, <strong>Equipos del dominio</strong> té permís de <strong>Leer</strong> i <strong>Inscribirse</strong>, i <strong>Admins. del dominio</strong> també pot inscriure&#39;s. Així qualsevol servidor del domini, i nosaltres com a <code>Administrador</code>, podem demanar certificats web amb aquesta plantilla.</p>
+<img width="800" alt="captura5a_seguretat" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura5a_seguretat.png" /><p>A <strong>Extensiones › Directivas de aplicación</strong> surt l&#39;ús <strong>Autenticación del servidor</strong>: el certificat serveix per identificar un servidor, no per signar scripts.</p>
+<img width="800" alt="captura5b" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura5b.png" /><p>Després la publiquem a RAZVAN-CA (<strong>Plantillas de certificado › Nuevo › Plantilla de certificado para emitir</strong>, o per PowerShell) perquè la pugui fer servir.</p>
 <pre><code class="language-powershell">certutil -SetCATemplates +WebServer-SAN
 </code></pre>
 <img width="800" alt="captura5" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura5.png" /><p>A <strong>Plantillas de certificado</strong> de <code>certsrv.msc</code> ja surt <strong>WebServer-SAN</strong>, amb el propòsit <strong>Autenticación del servidor</strong>: el certificat serveix per identificar un servidor, no per signar scripts.</p>
@@ -294,20 +295,23 @@ certreq -accept web.cer
 <pre><code class="language-powershell">Get-ChildItem Cert:\LocalMachine\My | Where-Object Subject -eq &quot;CN=control.razvan.local&quot; | Format-List FriendlyName, Subject, Issuer, DnsNameList, NotAfter
 </code></pre>
 <img width="800" alt="captura6" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura6.png" /><p>Tenen el mateix nom i el mateix SAN. L&#39;única diferència és l&#39;<strong>emissor</strong>: el de pega se signa ell mateix i l&#39;oficial l&#39;ha signat <strong>RAZVAN-CA</strong>.</p>
-<hr>
+<p>A <code>certsrv.msc</code>, a <strong>Certificados emitidos</strong>, surt la sol·licitud 3, demanada per <code>RAZVAN\Administrador</code> amb la plantilla <strong>WebServer-SAN</strong>.</p>
+<img width="800" alt="captura6b_emesos" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura6b_emesos.png" /><p>L&#39;obrim amb doble clic i, a la pestanya <strong>Detalles</strong>, el camp <strong>Nombre alternativo del titular</strong> (el SAN) conté <code>Nombre DNS=control.razvan.local</code>.</p>
+<img width="800" alt="captura6b" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura6b.png" /><hr>
 <h3>Pas 8: El cadenat oficial (Nivell 6)</h3>
 <p>A IIS canviem el certificat de l&#39;enllaç <code>https</code> del <strong>Default Web Site</strong> pel <strong>Cadenat oficial</strong>.</p>
 <p>Al client obrim una finestra InPrivate d&#39;Edge i tornem a <code>https://control.razvan.local</code>.</p>
-<img width="800" alt="captura7" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura7.png" /><p>Ara la web surt a la primera, sense cap avís, i en clicar el cadenat Edge diu <strong>La conexión es segura</strong>.</p>
-<p>Si obrim el certificat que serveix la web i mirem la <strong>Ruta de certificación</strong>, veiem la jerarquia: <strong>RAZVAN-CA</strong> a dalt i <strong>control.razvan.local</strong> a sota.</p>
-<img width="800" alt="captura7b" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura7b.png" /><p>Edge mostra el cadenat perquè es compleixen quatre coses alhora:</p>
+<img width="800" alt="captura7" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura7.png" /><p>Ara la web surt a la primera, sense cap avís. En clicar el cadenat i després <strong>La conexión es segura</strong>, Edge diu <strong>El certificado es válido</strong>.</p>
+<p>Obrim el certificat des d&#39;aquí. Al <strong>Visor de certificados</strong> d&#39;Edge veiem que està emès per a <code>control.razvan.local</code> i que l&#39;emissor és <strong>RAZVAN-CA</strong>.</p>
+<img width="800" alt="captura7_visor" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura7_visor.png" /><p>A la pestanya <strong>Detalles</strong>, a dalt hi ha la <strong>Jerarquía de certificados</strong>: <strong>RAZVAN-CA</strong> a dalt i <strong>control.razvan.local</strong> a sota. És la cadena de confiança de la teoria.</p>
+<img width="800" alt="captura7_jerarquia" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura7_jerarquia.png" /><p>Edge mostra el cadenat perquè es compleixen quatre coses alhora:</p>
 <ol>
 <li>El certificat l&#39;ha signat RAZVAN-CA.</li>
 <li>RAZVAN-CA és a la llista de confiança del client (pas 3).</li>
 <li>El nom de l&#39;adreça, <code>control.razvan.local</code>, surt al SAN.</li>
 <li>El certificat no ha caducat ni està revocat.</li>
 </ol>
-<p>Per últim, obrim <code>https://192.168.56.18</code>.</p>
-<img width="800" alt="captura7c" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura7c.png" /><p>Surt l&#39;error <strong><code>NET::ERR_CERT_COMMON_NAME_INVALID</code></strong>. El certificat és oficial, però la IP no surt al SAN (falla la condició 3). Per acceptar més noms, al <code>web.inf</code> es poden posar separats amb <code>&amp;</code>, per exemple <code>&quot;dns=control.razvan.local&amp;dns=dc01.razvan.local&quot;</code>.</p>
+<p>Per últim, en una finestra InPrivate obrim els altres dos noms del servidor: <code>https://192.168.56.18</code> i <code>https://dc01.razvan.local</code>.</p>
+<img width="800" alt="captura7c" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura7c.png" /><img width="800" alt="captura7d" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura7d.png" /><p>En tots dos surt l&#39;error <strong><code>NET::ERR_CERT_COMMON_NAME_INVALID</code></strong>. El certificat és oficial, però ni la IP ni <code>dc01.razvan.local</code> surten al SAN (falla la condició 3). Per acceptar més noms, al <code>web.inf</code> es poden posar separats amb <code>&amp;</code>, per exemple <code>&quot;dns=control.razvan.local&amp;dns=dc01.razvan.local&quot;</code>.</p>
 <p>Al final fem una instantània de les dues màquines amb el nom <strong>Web amb HTTPS</strong>.</p>
 

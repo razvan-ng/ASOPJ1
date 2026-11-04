@@ -37,6 +37,14 @@ nslookup www.google.com
 
 L'usuari és `razvan\administrador`. El primer `nslookup` troba el controlador de domini a `192.168.56.18`, i el segon resol `www.google.com`, així que els reenviadors funcionen.
 
+Al servidor obrim l'**Administrador de DNS** (`dnsmgmt.msc`) i anem a **DC01 › Zonas de búsqueda directa › razvan.local**. A la zona hi ha el registre `dc01` (i, més endavant, `control`) que apunta a `192.168.56.18`.
+
+<img width="800" alt="captura1b" src="img/captura1b.png" />
+
+A les propietats de **DC01**, pestanya **Reenviadores**, hi ha les dues adreces: `10.0.2.3` (el DNS de la xarxa NAT de VirtualBox) i `8.8.8.8`. El DNS del domini respon el que és seu i pregunta a fora tota la resta.
+
+<img width="800" alt="captura1b2" src="img/captura1b2.png" />
+
 ---
 
 ### Pas 2: Instal·lem AD CS i creem RAZVAN-CA (Nivell 1)
@@ -133,14 +141,29 @@ Als certificats autosignats el subjecte i l'emissor són el mateix. Qualsevol po
 
 ### Pas 6: Creem la plantilla WebServer-SAN (Nivell 4)
 
-Dupliquem la plantilla **Servidor web** com a **WebServer-SAN**, amb aquestes opcions:
+Obrim la **Consola de plantillas de certificado** (`certtmpl.msc`) i dupliquem la plantilla **Servidor web** com a **WebServer-SAN**. A les propietats de la plantilla nova revisem cada pestanya.
 
-- Validesa de **2 anys**.
-- Nom del subjecte **proporcionat pel sol·licitant** (el posarem nosaltres a la sol·licitud).
-- **Equipos del dominio**: permís de llegir i inscriure's.
-- **Admins. del dominio**: permís de llegir, escriure i inscriure's.
+A **General**, el nom és `WebServer-SAN`, el **Período de validez** és de **2 años** i *Publicar certificado en Active Directory* queda desmarcat.
 
-Després la publiquem a RAZVAN-CA perquè la pugui fer servir.
+<img width="800" alt="captura5a_general" src="img/captura5a_general.png" />
+
+A **Compatibilidad**, l'entitat de certificació és **Windows Server 2016** i el destinatari **Windows 10/Windows Server 2016**.
+
+<img width="800" alt="captura5a_compat" src="img/captura5a_compat.png" />
+
+A **Nombre del sujeto** està marcat **Proporcionado por el solicitante**: el nom l'escriurem nosaltres a la sol·licitud.
+
+<img width="800" alt="captura5a_subjecte" src="img/captura5a_subjecte.png" />
+
+A **Seguridad**, **Equipos del dominio** té permís de **Leer** i **Inscribirse**, i **Admins. del dominio** també pot inscriure's. Així qualsevol servidor del domini, i nosaltres com a `Administrador`, podem demanar certificats web amb aquesta plantilla.
+
+<img width="800" alt="captura5a_seguretat" src="img/captura5a_seguretat.png" />
+
+A **Extensiones › Directivas de aplicación** surt l'ús **Autenticación del servidor**: el certificat serveix per identificar un servidor, no per signar scripts.
+
+<img width="800" alt="captura5b" src="img/captura5b.png" />
+
+Després la publiquem a RAZVAN-CA (**Plantillas de certificado › Nuevo › Plantilla de certificado para emitir**, o per PowerShell) perquè la pugui fer servir.
 
 ```powershell
 certutil -SetCATemplates +WebServer-SAN
@@ -206,6 +229,14 @@ Get-ChildItem Cert:\LocalMachine\My | Where-Object Subject -eq "CN=control.razva
 
 Tenen el mateix nom i el mateix SAN. L'única diferència és l'**emissor**: el de pega se signa ell mateix i l'oficial l'ha signat **RAZVAN-CA**.
 
+A `certsrv.msc`, a **Certificados emitidos**, surt la sol·licitud 3, demanada per `RAZVAN\Administrador` amb la plantilla **WebServer-SAN**.
+
+<img width="800" alt="captura6b_emesos" src="img/captura6b_emesos.png" />
+
+L'obrim amb doble clic i, a la pestanya **Detalles**, el camp **Nombre alternativo del titular** (el SAN) conté `Nombre DNS=control.razvan.local`.
+
+<img width="800" alt="captura6b" src="img/captura6b.png" />
+
 ---
 
 ### Pas 8: El cadenat oficial (Nivell 6)
@@ -216,11 +247,15 @@ Al client obrim una finestra InPrivate d'Edge i tornem a `https://control.razvan
 
 <img width="800" alt="captura7" src="img/captura7.png" />
 
-Ara la web surt a la primera, sense cap avís, i en clicar el cadenat Edge diu **La conexión es segura**.
+Ara la web surt a la primera, sense cap avís. En clicar el cadenat i després **La conexión es segura**, Edge diu **El certificado es válido**.
 
-Si obrim el certificat que serveix la web i mirem la **Ruta de certificación**, veiem la jerarquia: **RAZVAN-CA** a dalt i **control.razvan.local** a sota.
+Obrim el certificat des d'aquí. Al **Visor de certificados** d'Edge veiem que està emès per a `control.razvan.local` i que l'emissor és **RAZVAN-CA**.
 
-<img width="800" alt="captura7b" src="img/captura7b.png" />
+<img width="800" alt="captura7_visor" src="img/captura7_visor.png" />
+
+A la pestanya **Detalles**, a dalt hi ha la **Jerarquía de certificados**: **RAZVAN-CA** a dalt i **control.razvan.local** a sota. És la cadena de confiança de la teoria.
+
+<img width="800" alt="captura7_jerarquia" src="img/captura7_jerarquia.png" />
 
 Edge mostra el cadenat perquè es compleixen quatre coses alhora:
 1. El certificat l'ha signat RAZVAN-CA.
@@ -228,10 +263,12 @@ Edge mostra el cadenat perquè es compleixen quatre coses alhora:
 3. El nom de l'adreça, `control.razvan.local`, surt al SAN.
 4. El certificat no ha caducat ni està revocat.
 
-Per últim, obrim `https://192.168.56.18`.
+Per últim, en una finestra InPrivate obrim els altres dos noms del servidor: `https://192.168.56.18` i `https://dc01.razvan.local`.
 
 <img width="800" alt="captura7c" src="img/captura7c.png" />
 
-Surt l'error **`NET::ERR_CERT_COMMON_NAME_INVALID`**. El certificat és oficial, però la IP no surt al SAN (falla la condició 3). Per acceptar més noms, al `web.inf` es poden posar separats amb `&`, per exemple `"dns=control.razvan.local&dns=dc01.razvan.local"`.
+<img width="800" alt="captura7d" src="img/captura7d.png" />
+
+En tots dos surt l'error **`NET::ERR_CERT_COMMON_NAME_INVALID`**. El certificat és oficial, però ni la IP ni `dc01.razvan.local` surten al SAN (falla la condició 3). Per acceptar més noms, al `web.inf` es poden posar separats amb `&`, per exemple `"dns=control.razvan.local&dns=dc01.razvan.local"`.
 
 Al final fem una instantània de les dues màquines amb el nom **Web amb HTTPS**.
