@@ -1,0 +1,27 @@
+[
+  {
+    "folder": "targets i serveis personalitzats",
+    "slug": "tasca-linux",
+    "order": 1,
+    "title": "Targets i serveis personalitzats",
+    "kicker": "Linux · systemd",
+    "sistema": "GNU/Linux",
+    "os": "linux",
+    "subtitle": "Sistemes d'inici a Linux: SystemV, Upstart i systemd, runlevels/targets, i una activitat pràctica creant un target personalitzat amb accés remot per VNC.",
+    "card": "Sistemes d'inici (SystemV, Upstart i systemd), runlevels i targets, i una pràctica creant un target personalitzat de systemd amb accés remot per VNC.",
+    "tags": ["systemd", "targets", "runlevels", "TigerVNC"],
+    "files": ["00-teoria.md", "01-activitat.md"]
+  },
+  {
+    "folder": "configuració d'inici amb serveis personalitzats Windows",
+    "slug": "tasca-windows",
+    "order": 2,
+    "title": "Configuració d'inici amb serveis personalitzats a Windows",
+    "kicker": "Windows · NSSM",
+    "sistema": "Windows",
+    "os": "windows",
+    "subtitle": "Creació de serveis d'inici personalitzats a Windows amb NSSM, documentant la configuració i les proves realitzades a l'aula.",
+    "card": "Creació i configuració de serveis d'inici personalitzats a Windows amb NSSM, amb la documentació de les proves fetes a l'aula.",
+    "tags": ["NSSM", "serveis", "PowerShell"]
+  }
+]
