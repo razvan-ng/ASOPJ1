@@ -1,0 +1,25 @@
+---
+layout: default
+---
+<article class="tasca">
+  <div class="tasca-band">
+    <div class="wrap">
+      <a class="back-link" href="{{ '/' | relative_url }}">← Totes les tasques</a>
+      <p class="tasca-kicker">{{ page.kicker | default: "Tasca" }}</p>
+      <h1 class="tasca-title">{{ page.title }}</h1>
+      {% if page.subtitle %}<p class="tasca-subtitle">{{ page.subtitle }}</p>{% endif %}
+      <div class="tasca-meta">
+        {% if page.sistema %}<span class="chip chip-os">{{ page.sistema }}</span>{% endif %}
+        {% for t in page.tags %}<span class="chip">{{ t }}</span>{% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap doc">
+    {{ content }}
+  </div>
+
+  <div class="wrap tasca-foot">
+    <a class="btn-ghost" href="{{ '/' | relative_url }}">← Torna a l'inici</a>
+  </div>
+</article>

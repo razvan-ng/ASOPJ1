@@ -1,0 +1,24 @@
+---
+layout: tasca
+permalink: /tasca-linux/
+title: "Targets i serveis personalitzats"
+kicker: "Linux · systemd"
+subtitle: "Sistemes d'inici a Linux: SystemV, Upstart i systemd, runlevels/targets, i una activitat pràctica creant un target personalitzat amb accés remot per VNC."
+sistema: "GNU/Linux"
+tags:
+  - "systemd"
+  - "targets"
+  - "runlevels"
+  - "TigerVNC"
+description: "Teoria i pràctica sobre sistemes d'inici a Linux i creació d'un target personalitzat de systemd."
+---
+{% capture teoria %}{% include_relative "contingut/targets i serveis personalitzats/00-teoria.md" %}{% endcapture %}
+{% assign teoria = teoria | replace: '---
+layout: default
+title: SP1
+---', '' %}
+{% capture practica %}{% include_relative "contingut/targets i serveis personalitzats/01-activitat.md" %}{% endcapture %}
+{% capture tot %}{{ teoria }}
+
+{{ practica }}{% endcapture %}
+{{ tot | markdownify }}

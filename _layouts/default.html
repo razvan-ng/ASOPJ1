@@ -1,39 +1,78 @@
 <!DOCTYPE html>
-<html lang="ca">
+<html lang="ca" data-theme="auto">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% if page.title %}{{ page.title }} · {% endif %}ASOPJ1</title>
-  <meta name="description" content="Documentació del mòdul d'Administració de Sistemes Operatius (ASOPJ1) — 2n ASIX.">
-  <link rel="icon" href="data:,">
+  <meta name="description" content="{{ page.description | default: site.description }}">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9A%99%EF%B8%8F%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ '/css/style.css' | relative_url }}">
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('asopj1-theme');
+        if (t) document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    })();
+  </script>
 </head>
 <body>
+  <a class="skip-link" href="#main">Salta al contingut</a>
+
   <header class="site-header">
-    <div class="wrap">
+    <div class="wrap header-inner">
       <a class="brand" href="{{ '/' | relative_url }}">
-        <span class="brand-mark">&gt;_</span> ASOPJ1
+        <span class="brand-mark">&gt;_</span>
+        <span class="brand-text">ASOPJ1</span>
       </a>
-      <nav class="site-nav">
-        <a href="{{ '/' | relative_url }}"{% if page.url == '/' or page.url == '/index.html' %} class="active"{% endif %}>Inici</a>
-        <a href="{{ '/SP1/SP1.html' | relative_url }}"{% if page.title == 'SP1' %} class="active"{% endif %}>SP1</a>
-        <a href="#" class="disabled" aria-disabled="true">SP2</a>
-        <a href="#" class="disabled" aria-disabled="true">SP3</a>
+
+      <input type="checkbox" id="nav-toggle" class="nav-toggle" hidden>
+      <label for="nav-toggle" class="nav-burger" aria-label="Obre el menú">
+        <span></span><span></span><span></span>
+      </label>
+
+      <nav class="site-nav" aria-label="Navegació principal">
+        <a href="{{ '/' | relative_url }}"{% if page.url == '/' %} class="active"{% endif %}>Inici</a>
+        <a href="{{ '/tasca-linux/' | relative_url }}"{% if page.url contains 'tasca-linux' %} class="active"{% endif %}>Linux · systemd</a>
+        <a href="{{ '/tasca-windows/' | relative_url }}"{% if page.url contains 'tasca-windows' %} class="active"{% endif %}>Windows · NSSM</a>
         <a href="https://github.com/razvan-ng/ASOPJ1" target="_blank" rel="noopener">GitHub ↗</a>
+        <button type="button" class="theme-btn" id="theme-btn" aria-label="Canvia el tema" title="Canvia el tema">
+          <span class="theme-ico">◐</span>
+        </button>
       </nav>
     </div>
   </header>
 
-  <main class="wrap content">
+  <main id="main">
     {{ content }}
   </main>
 
   <footer class="site-footer">
-    <div class="wrap">
-      <p>Razvan Nastasa Ghitau · ASOPJ1 — Administració de Sistemes Operatius · 2n ASIX ·
-        <a href="https://github.com/razvan-ng/ASOPJ1" target="_blank" rel="noopener">codi font al repositori</a>
-      </p>
+    <div class="wrap footer-inner">
+      <p class="footer-brand"><span class="brand-mark">&gt;_</span> ASOPJ1</p>
+      <p>Razvan Nastasa Ghitau · Administració de Sistemes Operatius · 2n ASIX</p>
+      <p><a href="https://github.com/razvan-ng/ASOPJ1" target="_blank" rel="noopener">Codi font al repositori ↗</a></p>
     </div>
   </footer>
+
+  <script>
+    (function () {
+      var btn = document.getElementById('theme-btn');
+      if (!btn) return;
+      function current() {
+        var t = document.documentElement.getAttribute('data-theme');
+        if (t === 'light' || t === 'dark') return t;
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      btn.addEventListener('click', function () {
+        var next = current() === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        try { localStorage.setItem('asopj1-theme', next); } catch (e) {}
+      });
+    })();
+  </script>
 </body>
 </html>
