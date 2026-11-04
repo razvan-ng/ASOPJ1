@@ -1,8 +1,4 @@
 name: Generar el lloc
-
-# Quan afegeixes o edites contingut (una carpeta amb .md dins de contingut/),
-# aquesta acció regenera les pàgines i la portada i torna a publicar el web.
-
 on:
   push:
     branches: [main]
