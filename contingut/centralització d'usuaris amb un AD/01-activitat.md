@@ -1,5 +1,3 @@
----
-
 ## 6. Activitat Pràctica: Entitat certificadora amb Active Directory
 
 ### 🎯 Objectiu de l'activitat

@@ -7,6 +7,9 @@ lang: "ca"
 # Els fitxers de contingut (.md) es rendereritzen dins de les pàgines de tasca
 # mitjançant include_relative; no es publiquen com a pàgines soltes.
 exclude:
+  - "contingut/*.md"
+  - "contingut/centralització d'usuaris amb un AD/00-teoria.md"
+  - "contingut/centralització d'usuaris amb un AD/01-activitat.md"
   - "contingut/contingut.md"
   - "contingut/targets i serveis personalitzats/00-teoria.md"
   - "contingut/targets i serveis personalitzats/01-activitat.md"
