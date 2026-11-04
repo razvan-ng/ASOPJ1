@@ -12,13 +12,197 @@ tags:
   - "TigerVNC"
 description: "Teoria i pràctica sobre sistemes d'inici a Linux i creació d'un target personalitzat de systemd."
 ---
-{% capture teoria %}{% include_relative "contingut/targets i serveis personalitzats/00-teoria.md" %}{% endcapture %}
-{% assign teoria = teoria | replace: '---
-layout: default
-title: SP1
----', '' %}
-{% capture practica %}{% include_relative "contingut/targets i serveis personalitzats/01-activitat.md" %}{% endcapture %}
-{% capture tot %}{{ teoria }}
+<!-- Contingut generat a partir dels .md de contingut/ (sense modificar-los). -->
+<h1>ASOPJ1 — SP1: SISTEMES D&#39;INICI</h1>
+<blockquote>
+<p><strong>Autor/a:</strong> Razvan Nastasa Ghitau<br><strong>Mòdul:</strong> ASOPJ1<br><strong>Data:</strong> Setembre 2026  </p>
+</blockquote>
+<hr>
+<h1>CONTINGUTS</h1>
+<h2>1.- SystemV vs Upstart vs Systemd</h2>
+<ul>
+<li><strong>1.1-</strong> Runlevels o Targets?</li>
+<li><strong>1.2-</strong> Quin és el nostre SO?</li>
+</ul>
+<h2>2.- SystemV</h2>
+<ul>
+<li><strong>2.1-</strong> Directoris</li>
+<li><strong>2.2-</strong> Procés d&#39;arrencada</li>
+</ul>
+<h2>3.- Systemd</h2>
+<ul>
+<li><strong>3.1-</strong> Directoris</li>
+<li><strong>3.2-</strong> <code>systemctl</code></li>
+<li><strong>3.3-</strong> Dependències</li>
+<li><strong>3.4-</strong> Modificar target provisional</li>
+<li><strong>3.5-</strong> Modificar target definitiu</li>
+<li><strong>3.6-</strong> Afegir/treure serveis de target</li>
+</ul>
+<hr>
+<h1>CONCEPTES</h1>
+<table>
+<thead>
+<tr>
+<th align="left">Concepte</th>
+<th align="left">Descripció</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><strong>Kernel</strong></td>
+<td align="left">Gestió de processos i recursos del sistema.</td>
+</tr>
+<tr>
+<td align="left"><strong>Aplicació</strong></td>
+<td align="left">Programa que interactua amb l&#39;usuari i s&#39;executa en <strong>1r pla</strong> (<em>foreground</em>).</td>
+</tr>
+<tr>
+<td align="left"><strong>Servei</strong></td>
+<td align="left">Programa associat al SO que s&#39;executa en <strong>2n pla</strong> (<em>background</em>).</td>
+</tr>
+<tr>
+<td align="left"><strong>Procés</strong></td>
+<td align="left">Funció/instància interna de treball del SO.</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Nota:</strong> Les <strong>aplicacions</strong> i els <strong>serveis</strong> generen <strong>processos</strong> (que el Kernel s&#39;encarrega de sincronitzar i planificar).</p>
+</blockquote>
+<hr>
+<h1>NIVELLS D&#39;EXECUCIÓ (<em>RUNLEVELS</em>)</h1>
+<table>
+<thead>
+<tr>
+<th align="center">Nivell</th>
+<th align="left">Mode</th>
+<th align="left">Descripció</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center"><strong>0</strong></td>
+<td align="left"><code>power off</code></td>
+<td align="left">Aturada del sistema.</td>
+</tr>
+<tr>
+<td align="center"><strong>1</strong></td>
+<td align="left"><code>rescue</code></td>
+<td align="left">Mode 1 usuari (amb dimonis mínims).</td>
+</tr>
+<tr>
+<td align="center"><strong>2 - 5</strong></td>
+<td align="left"><code>multi-user</code></td>
+<td align="left">Multiusuari, xarxa, amb/sense entorn gràfic.</td>
+</tr>
+<tr>
+<td align="center"><strong>6</strong></td>
+<td align="left"><code>reboot</code></td>
+<td align="left">Reinici del sistema.</td>
+</tr>
+</tbody></table>
+<hr>
+<h1>COMANDES D&#39;ATURADA</h1>
+<p>Exemple d&#39;aturada del servei <code>cron</code> segons l&#39;eina o entorn:</p>
+<pre><code class="language-bash"># Execució del script d&#39;inici directament (SystemV)
+/etc/init.d/cron stop
 
-{{ practica }}{% endcapture %}
-{{ tot | markdownify }}
+# Ús de la comanda de serveis (SystemV / Compatibilitat)
+service cron stop
+
+# Ús del controlador de sistemes i serveis (Systemd)
+systemctl stop cron
+</code></pre>
+<hr>
+<h2>1. SystemV vs Upstart vs Systemd</h2>
+<h3>1.1. Runlevels o Targets?</h3>
+<img width="1024" height="182" alt="image" src="https://github.com/user-attachments/assets/edb8bd09-354c-413f-a62a-e6bd7f7abce1" /><p>Amb la comanda <code>runlevel</code>, podrem comprovar el nivell d&#39;execució actual. Aquesta comanda s&#39;ha executat en Ubuntu 24, amb Ubuntu 26 no funciona i haurem de fer servir l&#39;alternativa següent <code>systemctl get-default</code>:</p>
+<img width="338" height="74" alt="image" src="https://github.com/user-attachments/assets/a15bd0c1-a0a7-444f-a5e4-e3af87d43a6c" /><p>El <em>graphical.target</em> correspon al runlevel 5. </p>
+<h3>1.2. Quin és el nostre SO?</h3>
+<img width="621" height="426" alt="image" src="https://github.com/user-attachments/assets/355c2e5c-ffd2-4297-aa63-2f9983c09df3" /><p>A través de la comanda <code>man init</code> o bé consultant la destinació de l&#39;enllaç simbòlic <code>/sbin/init</code>:</p>
+<img width="418" height="70" alt="image" src="https://github.com/user-attachments/assets/880b0846-a62a-4402-821a-cd1acd49cb95" /><p><code>readlink -v /sbin/init</code> Serveixen per comprovar quin sistema d&#39;inici està actiu (en aquest cas <em>systemd</em>.)</p>
+<hr>
+<h2>2. SystemV</h2>
+<h3>2.1. Directoris</h3>
+<img width="606" height="189" alt="image" src="https://github.com/user-attachments/assets/d5711a7b-167a-41e9-a3a7-723bbd60981a" /><p>Tots els elements en verd corresponen a serveis. Si un servei es troba aquí, es pot reiniciar utilitzant el mètode indicat a continuació. Tot allò gestionat mitjançant l&#39;estàndard SystemV s&#39;allotja dins de <code>init.d</code>.</p>
+<img width="252" height="313" alt="image" src="https://github.com/user-attachments/assets/03b66dc9-24d8-4524-a8d3-6a8070a772b3" /><p>Dins de <code>/etc/</code> també s&#39;hi troben els directoris <code>rcX.d</code> (<em>runlevels</em>): una carpeta específica per a cada nivell d&#39;execució.</p>
+<img width="604" height="251" alt="image" src="https://github.com/user-attachments/assets/1a343376-e98a-45f1-a02c-9c3d99dfe4ca" /><p>Cada &quot;rc&quot; és per un nivell en concret.</p>
+<h3>2.2. Procés d&#39;arrencada</h3>
+<img width="282" height="29" alt="image" src="https://github.com/user-attachments/assets/2ba79580-8824-4d94-a0be-a829f2b9cef5" /><p>Amb <code>init 6</code> reiniciem.</p>
+<img width="287" height="38" alt="image" src="https://github.com/user-attachments/assets/2b867f57-b67d-4171-a1f8-ef79c6d3547a" /><p>Amb <code>init 0</code> apaguem.</p>
+<hr>
+<h2>3. Systemd</h2>
+<h3>3.1. Directoris</h3>
+<img width="611" height="646" alt="image" src="https://github.com/user-attachments/assets/1788191f-0448-4a64-a445-905e3a6fae08" /><p><code>/lib/systemd/system</code> és el directori per defecte on s&#39;instal·len les unitats de systemd. Aquest directori s&#39;utilitza quan volem aplicar o modificar qualsevol configuració. En cas de duplicitat, les opcions editades a <code>/etc/</code> sempre tenen prioritat sobre les de <code>/lib/</code>.</p>
+<h3>3.2. systemctl</h3>
+<img width="623" height="678" alt="image" src="https://github.com/user-attachments/assets/f5065b48-c89e-4137-88ef-e1afdb8eeca5" /><p>Per filtrar per tipus d&#39;unitat: Per exemple, si llistem i filtrem els <em>targets</em> gestionats per systemd.</p>
+<h3>3.3. Dependències</h3>
+<img width="449" height="65" alt="image" src="https://github.com/user-attachments/assets/ddd82b52-6592-4fed-8a0d-e9beaa81a37c" /><p>Amb aquesta comanda sabrem quin target per defecte tenim en tot moment.</p>
+<img width="1024" height="209" alt="image" src="https://github.com/user-attachments/assets/1d969a00-18c7-45ad-a5ec-4d56ca826ee0" /><img width="870" height="860" alt="image" src="https://github.com/user-attachments/assets/4e115679-82ca-4c72-9d68-6bee9ab44d11" /><p>La comanda <code>systemctl list-dependencies</code> detalla, específicament, quines dependències han d&#39;estar actives perquè el <code>graphical.target</code> s&#39;iniciï correctament:</p>
+<h3>3.4. Modificar target provisional</h3>
+<img width="477" height="45" alt="image" src="https://github.com/user-attachments/assets/e3cc2aa7-91db-48d1-bcf5-2d57d1412b9f" /><img width="585" height="103" alt="image" src="https://github.com/user-attachments/assets/81328b0d-0394-4500-923f-c70f56b8df1f" /><p>Amb systemctl isolate i el target que volem executar al moment.</p>
+<h3>3.5. Modificar target definitiu</h3>
+<img width="1024" height="352" alt="image" src="https://github.com/user-attachments/assets/d9ab90bb-aa84-44f7-8a22-0981615f1ffd" /><p>En cercar un <em>target</em> pel seu nom, com ara l&#39;enllaç de <code>default.target</code>, veiem que habitualment apunta cap a <code>graphical.target</code> (l&#39;entorn d&#39;escriptori per defecte).</p>
+<img width="1024" height="55" alt="image" src="https://github.com/user-attachments/assets/ce2d5c21-b3fa-4fe3-b499-44e343b41b30" /><h3>3.6. Afegir / treure serveis target</h3>
+<img width="1024" height="55" alt="image" src="https://github.com/user-attachments/assets/22cd98d8-5e25-47be-98ab-1bfa8081d9a5" /><p>Si esborrem l&#39;enllaç manualment (o bé fem servir <code>systemctl set-default</code>) i el tornem a generar apuntant directament cap al <em>target</em> que el sistema requereixi per procediment.</p>
+<img width="1024" height="371" alt="image" src="https://github.com/user-attachments/assets/7b6e8746-4ef0-4ca4-bdac-fead9aadc81a" /><p>L&#39;entorn per defecte ja no serà el gràfic, sinó un de manteniment: rescue.target.</p>
+<img width="1024" height="227" alt="image" src="https://github.com/user-attachments/assets/b17baee7-d1f6-4acf-bdb5-99d1175c9855" /><p>Ho podem comprovar en fer un <em>reboot</em>: ens quedarem dins d&#39;un <em>prompt</em> en <em>rescue mode</em> a l&#39;espera de resoldre&#39;l o de cancel·lar la reparació (després revertim els canvis per restaurar-ho).</p>
+<hr>
+<h2>4. Activitat Pràctica: Target Personalitzat i Serveis d&#39;Accés Remot</h2>
+<h3>🎯 Objectiu de l&#39;activitat</h3>
+<ol>
+<li>Crear un <strong>target personalitzat de systemd</strong> amb el teu nom (<code>razvan.target</code>) que depengui d&#39;un target existent (ex: <code>graphical.target</code>).</li>
+<li>Configurar el nou target com el <strong>target per defecte</strong> de l&#39;arrencada del sistema.</li>
+<li>Associar i configurar un servei que iniciï una <strong>sessió de TigerVNC</strong>, de manera que altres usuaris puguin tenir accés complet a la interfície gràfica de l&#39;ordinador.</li>
+<li>Definir un <strong>script executat amb permisos de <code>root</code></strong> associat al target per establir una <strong>reverse shell</strong> amb privilegis totals a l&#39;inici del sistema.</li>
+</ol>
+<hr>
+<h3>Pas 1: Instal·lem els paquets adients per TigerVNC</h3>
+<img width="648" height="437" alt="image" src="https://github.com/user-attachments/assets/5d041bfa-ed71-4943-90ea-284654fc3db0" /><pre><code class="language-bash">sudo apt install -y tigervnc-standalone-server tigervnc-common xfce4 xfce4-goodies
+</code></pre>
+<h3>Pas 2: Configurem la contrasenya del VNC</h3>
+<img width="451" height="112" alt="image" src="https://github.com/user-attachments/assets/66337f38-e1fc-4427-93a6-118078e0b664" /><pre><code class="language-bash">vncpasswd
+</code></pre>
+<p>Configurem una contrasenya amb control total ja que és el que ens interessa.</p>
+<h3>Pas 3: Configurar el xstartup</h3>
+<img width="355" height="70" alt="image" src="https://github.com/user-attachments/assets/fd5d2ec1-26d6-44c4-8f7b-24572d615be8" /><img width="466" height="199" alt="image" src="https://github.com/user-attachments/assets/d9ffa2dd-2fac-48f0-8805-7243ccfea8c8" /><pre><code class="language-bash">#!/bin/sh
+unset SESSION_MANAGER
+unset DBUS_SESSION_BUS_ADDRESS
+export XDG_SESSION_TYPE=x11
+export XDG_CURRENT_DESKTOP=XFCE
+export XDG_SESSION_DESKTOP=xfce
+exec dbus-run-session -- startxfce4
+</code></pre>
+<img width="829" height="345" alt="image" src="https://github.com/user-attachments/assets/1f77193a-b2d2-4662-ab40-1243aab5b5fc" /><p>Instal·lem el paquet dbus-x11.</p>
+<h3>Pas 4: Creem el target personalitzat</h3>
+<img width="550" height="177" alt="image" src="https://github.com/user-attachments/assets/a9518992-2f1d-478b-876d-b301ed9ecd7b" /><pre><code class="language-bash">sudo nano /etc/systemd/system/razvan.target
+
+[Unit]
+Description=Razvan custom target
+Requires=graphical.target
+After=graphical.target
+AllowIsolate=yes
+</code></pre>
+<h3>Pas 5: Definim el target com default.</h3>
+<img width="643" height="139" alt="image" src="https://github.com/user-attachments/assets/788ea199-c483-43d5-bb06-27241368ce65" /><pre><code class="language-bash">sudo systemctl set-default razvan.target
+</code></pre>
+<h3>Pas 6: Crear el servei de TigerVNC.</h3>
+<img width="590" height="335" alt="image" src="https://github.com/user-attachments/assets/3643614b-daed-4e5e-ac54-49dcf2c3be67" /><pre><code class="language-bash">sudo nano /etc/systemd/system/vncserver@.service
+</code></pre>
+<img width="648" height="102" alt="image" src="https://github.com/user-attachments/assets/9685d08b-56d2-4004-9047-192f99f17fb8" /><p>L&#39;habilitem al nostre usuari.</p>
+<h3>Pas 7: Crear la reverse shell root.</h3>
+<img width="610" height="282" alt="image" src="https://github.com/user-attachments/assets/a73125f0-0342-4bd9-9794-5e0987525fca" /><p>Primer creem el servei i després passarem a la creació del script.</p>
+<img width="610" height="298" alt="image" src="https://github.com/user-attachments/assets/928b35df-da56-47ce-b26f-7d8194047125" /><p>Creem una reverse shell bàsica, on el host serà la màquina atacant.</p>
+<img width="642" height="117" alt="image" src="https://github.com/user-attachments/assets/d92e1009-7952-4e25-917c-ebb955043980" /><p>Configurem els permissos d&#39;execució del script i reiniciem el dimoni i activem el servei a l&#39;arrancada del sistema. </p>
+<h3>Pas 8. Comprovació de reverse shell.</h3>
+<img width="298" height="58" alt="image" src="https://github.com/user-attachments/assets/7fa338dd-55d5-4d83-a56d-2edc6186d2ec" /><p>Reiniciem la màquina</p>
+<img width="344" height="74" alt="image" src="https://github.com/user-attachments/assets/0356e1ef-097b-4ef4-b18c-966a9a5a532f" /><p>Un cop reiniciada la màquina comprovem el target per default que tenim. Podem veure que s&#39;ha aplicat el nostre target correctament.</p>
+<img width="654" height="449" alt="image" src="https://github.com/user-attachments/assets/a44ceebe-cfbd-43f8-9ce2-b883e28a74f6" /><p>Comprovem que el servei per al server TigerVNC està viu.</p>
+<img width="755" height="311" alt="image" src="https://github.com/user-attachments/assets/b429e416-9821-47a7-b488-74fa4bc2e24c" /><p>Comproves també que el servei d&#39;SSH s&#39;ha iniciat. Podem veure que hi ha hagut un error (ens ha retornat error 1). Això és degut a que no hi havia ningú escoltant a la IP que hem assignat al número de port. Si abans de reiniciar la màquina encenem una escolta amb <em>netcat</em> ja no tindrem aquesta fallada.</p>
+<img width="270" height="67" alt="image" src="https://github.com/user-attachments/assets/643d8ff4-4c32-46c7-a61c-ec50cccac7da" /><p>Encenem l&#39;escolta al host (màquina atacant) i reiniciem la VM posteriorment.</p>
+<img width="795" height="311" alt="image" src="https://github.com/user-attachments/assets/76a8f5ac-4c3f-4b34-8692-fb19d4919080" /><p>Ara veiem que el servei s&#39;ha iniciat correctament.</p>
+<img width="629" height="207" alt="image" src="https://github.com/user-attachments/assets/0c0562fd-62c2-4d0c-8954-b417ceea29c6" /><p>I al host veiem que tenim accés al terminal de la màquina virtual.</p>
+<h3>Pas 9. Comprovació de server TigerVNC</h3>
+<img width="450" height="183" alt="image" src="https://github.com/user-attachments/assets/270a5365-54ab-42b7-abda-d5a6a0d98b38" /><p>Obrim el programa de TigerVNC (l&#39;haurem de tenir instal·lat al host prèviament) i introduïm la IP de la víctima i el nº de port adient.</p>
+<img width="408" height="207" alt="image" src="https://github.com/user-attachments/assets/23831ec5-9c0d-42ed-93f3-e2f741de9a56" /><p>Introduïm la contrasenya del VNC.</p>
+<img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/3695d1c1-ec00-4d1b-9a40-c486127b919f" /><p>I ja tindrem imatge.</p>
+<h2>5. Activitat Pràctica: Servei personalitzat a Windows amb NSSM</h2>
+<img width="1875" height="953" alt="imatge" src="https://github.com/user-attachments/assets/e097a59c-0fdd-4856-bb8d-3d3f25db1f9a" /><p>Ara al nostre host, si executem <em>python server.py</em> rebrem la captura de pantalla d&#39;aquell moment.</p>
+
