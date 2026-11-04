@@ -1,0 +1,314 @@
+---
+layout: tasca
+permalink: /tasca-ad/
+title: "Centralització d'usuaris amb un AD"
+kicker: "Windows Server · AD CS"
+subtitle: "Entitat certificadora RAZVAN-CA integrada a Active Directory: plantilles, sol·licituds amb certreq i la web control.razvan.local amb HTTPS i cadenat oficial."
+sistema: "Windows Server"
+tags:
+  - "AD CS"
+  - "PKI"
+  - "IIS"
+  - "HTTPS"
+description: "Centralització d'usuaris amb un AD — ASOPJ1"
+---
+<!-- Pàgina generada automàticament per tools/build.mjs a partir dels .md de
+     contingut/centralització d'usuaris amb un AD/ (que no es modifiquen). No editeu aquest fitxer a mà. -->
+<h1>ASOPJ1 — Centralització d&#39;usuaris amb un AD: Entitat certificadora</h1>
+<blockquote>
+<p><strong>Autor/a:</strong> Razvan Nastasa Ghitau<br><strong>Mòdul:</strong> ASOPJ1<br><strong>Data:</strong> Novembre 2026  </p>
+</blockquote>
+<hr>
+<h1>CONTINGUTS</h1>
+<h2>1.- Conceptes bàsics de PKI</h2>
+<h2>2.- La cadena de confiança</h2>
+<h2>3.- CA empresarial o CA independent</h2>
+<h2>4.- Com es demana un certificat</h2>
+<h2>5.- Eines</h2>
+<hr>
+<h2>1. Conceptes bàsics de PKI</h2>
+<table>
+<thead>
+<tr>
+<th>Concepte</th>
+<th>Què és</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Certificat digital</strong></td>
+<td>Fitxer que diu «aquesta clau pública és d&#39;aquest servidor o d&#39;aquesta persona», signat per algú de confiança. És com un DNI digital.</td>
+</tr>
+<tr>
+<td><strong>Clau privada i clau pública</strong></td>
+<td>Parella de claus que van juntes. El que se signa amb la privada només es pot comprovar amb la pública. La <strong>privada</strong> no surt mai de l&#39;equip del propietari.</td>
+</tr>
+<tr>
+<td><strong>Entitat certificadora (CA)</strong></td>
+<td>Qui signa els certificats. Comprova qui ets i ho certifica amb la seva signatura.</td>
+</tr>
+<tr>
+<td><strong>CA arrel</strong></td>
+<td>La CA de dalt de tot. El seu certificat se&#39;l signa ella mateixa.</td>
+</tr>
+<tr>
+<td><strong>PKI</strong></td>
+<td>Infraestructura de clau pública: el conjunt de CA, certificats, plantilles i llistes de revocació.</td>
+</tr>
+<tr>
+<td><strong>AD CS</strong></td>
+<td><em>Servicios de certificados de Active Directory</em>. El rol de Windows Server que converteix el servidor en una CA.</td>
+</tr>
+<tr>
+<td><strong>Plantilla de certificat</strong></td>
+<td>El motlle d&#39;un tipus de certificat: per a què serveix, quant dura, d&#39;on surt el nom i qui el pot demanar.</td>
+</tr>
+<tr>
+<td><strong>Sol·licitud (CSR)</strong></td>
+<td>El fitxer que s&#39;envia a la CA per demanar un certificat. Porta el nom i la clau pública, mai la privada.</td>
+</tr>
+<tr>
+<td><strong>SAN</strong></td>
+<td><em>Subject Alternative Name</em>. La llista de noms per als quals és vàlid el certificat. Els navegadors <strong>només miren aquest camp</strong>.</td>
+</tr>
+<tr>
+<td><strong>Revocació i CRL</strong></td>
+<td>Revocar és anul·lar un certificat abans que caduqui. La CRL és la llista dels certificats revocats.</td>
+</tr>
+</tbody></table>
+<h2>2. La cadena de confiança</h2>
+<p>En aquesta pràctica creem la CA <strong>RAZVAN-CA</strong>, que és una CA arrel. Ella signa el certificat de la web <code>control.razvan.local</code>.</p>
+<p>Quan el navegador rep el certificat, puja per la cadena: si arriba a una CA arrel que té a la seva llista de confiança, confia en el certificat. Un certificat <strong>autosignat</strong> («cadenat de pega») no té ningú a sobre i per això cap equip hi confia.</p>
+<h2>3. CA empresarial o CA independent</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>CA empresarial</th>
+<th>CA independent</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Active Directory</strong></td>
+<td>La necessita</td>
+<td>No la necessita</td>
+</tr>
+<tr>
+<td><strong>Plantilles</strong></td>
+<td>Sí</td>
+<td>No</td>
+</tr>
+<tr>
+<td><strong>Confiança dels equips</strong></td>
+<td>Automàtica, per AD</td>
+<td>Cal instal·lar el certificat arrel a cada equip</td>
+</tr>
+<tr>
+<td><strong>Emissió</strong></td>
+<td>Automàtica, segons permisos</td>
+<td>Les sol·licituds esperen que un administrador les aprovi</td>
+</tr>
+</tbody></table>
+<p>Nosaltres muntem una <strong>CA empresarial arrel</strong> al mateix servidor que el controlador de domini (<code>DC01</code>).</p>
+<h2>4. Com es demana un certificat</h2>
+<p>Per al servidor web fem la sol·licitud a mà amb un fitxer <code>.inf</code> i l&#39;ordre <code>certreq</code>:</p>
+<ol>
+<li><code>certreq -new</code> → crea la parella de claus i la sol·licitud (<code>web.req</code>). La clau privada es queda al servidor.</li>
+<li><code>certreq -submit</code> → envia la sol·licitud a RAZVAN-CA.</li>
+<li>RAZVAN-CA la signa i retorna el certificat (<code>web.cer</code>).</li>
+<li><code>certreq -accept</code> → instal·la el certificat al magatzem de l&#39;equip, unit a la seva clau privada.</li>
+</ol>
+<h2>5. Eines</h2>
+<table>
+<thead>
+<tr>
+<th>Eina</th>
+<th>Per a què serveix</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>certsrv.msc</code></td>
+<td>Consola de la CA: certificats emesos i revocats, plantilles que emet</td>
+</tr>
+<tr>
+<td><code>certtmpl.msc</code></td>
+<td>Consola de plantilles: duplicar-les i canviar-les</td>
+</tr>
+<tr>
+<td><code>certlm.msc</code></td>
+<td>Certificats de l&#39;equip (<em>local machine</em>)</td>
+</tr>
+<tr>
+<td><code>certreq</code></td>
+<td>Crea, envia i accepta sol·licituds de certificat</td>
+</tr>
+<tr>
+<td><code>gpupdate /force</code></td>
+<td>Torna a aplicar les directives del domini</td>
+</tr>
+<tr>
+<td><code>Get-ChildItem Cert:\LocalMachine\My</code></td>
+<td>Llista els certificats personals de l&#39;equip</td>
+</tr>
+<tr>
+<td><code>New-SelfSignedCertificate</code></td>
+<td>Fabrica un certificat signat per ell mateix</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>6. Activitat Pràctica: Entitat certificadora amb Active Directory</h2>
+<h3>🎯 Objectiu de l&#39;activitat</h3>
+<ol>
+<li>Tenir a punt el domini <strong><code>razvan.local</code></strong> amb el servidor <strong><code>DC01</code></strong> i el client Windows 10 unit al domini.</li>
+<li>Crear l&#39;entitat certificadora empresarial arrel <strong>RAZVAN-CA</strong> amb AD CS.</li>
+<li>Publicar la web del centre de control a <strong><code>control.razvan.local</code></strong> amb IIS.</li>
+<li>Veure per què un certificat autosignat no serveix.</li>
+<li>Crear la plantilla <strong>WebServer-SAN</strong>, demanar el certificat oficial amb <code>certreq</code> i posar-lo a la web perquè surti el <strong>cadenat</strong>.</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Peça</th>
+<th>Valor</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Servidor</td>
+<td><code>DC01</code> · <code>192.168.56.18</code> · AD DS, DNS, AD CS i IIS</td>
+</tr>
+<tr>
+<td>Client</td>
+<td><code>DESKTOP-IAMD6GV</code> · Windows 10 unit a <code>razvan.local</code></td>
+</tr>
+<tr>
+<td>Domini</td>
+<td><code>razvan.local</code> (NetBIOS <code>RAZVAN</code>)</td>
+</tr>
+<tr>
+<td>Entitat certificadora</td>
+<td><code>RAZVAN-CA</code></td>
+</tr>
+<tr>
+<td>Web</td>
+<td><code>control.razvan.local</code></td>
+</tr>
+</tbody></table>
+<hr>
+<h3>Pas 1: Comprovem el domini des del client (Nivell 0)</h3>
+<p>Al servidor afegim els reenviadors DNS perquè el domini també pugui resoldre noms d&#39;Internet.</p>
+<pre><code class="language-powershell">Set-DnsServerForwarder -IPAddress 10.0.2.3,8.8.8.8
+</code></pre>
+<p>Al client, iniciem sessió com a <code>RAZVAN\Administrador</code> i comprovem l&#39;usuari i el DNS.</p>
+<pre><code class="language-powershell">whoami
+nslookup dc01.razvan.local
+nslookup www.google.com
+</code></pre>
+<img width="800" alt="captura1" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura1.png" /><p>L&#39;usuari és <code>razvan\administrador</code>. El primer <code>nslookup</code> troba el controlador de domini a <code>192.168.56.18</code>, i el segon resol <code>www.google.com</code>, així que els reenviadors funcionen.</p>
+<hr>
+<h3>Pas 2: Instal·lem AD CS i creem RAZVAN-CA (Nivell 1)</h3>
+<p>Al servidor instal·lem el rol <strong>Servicios de certificados de Active Directory</strong> i el configurem com a <strong>CA empresarial arrel</strong> anomenada <code>RAZVAN-CA</code>, amb una validesa de 5 anys.</p>
+<pre><code class="language-powershell">Install-WindowsFeature ADCS-Cert-Authority -IncludeManagementTools
+Install-AdcsCertificationAuthority -CAType EnterpriseRootCA -CACommonName &quot;RAZVAN-CA&quot; -ValidityPeriod Years -ValidityPeriodUnits 5
+</code></pre>
+<p>Obrim la consola de la CA amb <code>certsrv.msc</code>.</p>
+<img width="800" alt="captura2" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura2.png" /><p>A l&#39;esquerra surt <strong>RAZVAN-CA</strong> amb el senyal verd, i a dins les carpetes de certificats revocats, emesos, sol·licituds i plantilles.</p>
+<p>A les propietats de RAZVAN-CA, <strong>Ver certificado › Ruta de certificación</strong>, veiem que la ruta només té un nivell: és la CA arrel i se signa ella mateixa.</p>
+<img width="800" alt="captura2b" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura2b.png" /><hr>
+<h3>Pas 3: El client ja confia en RAZVAN-CA</h3>
+<p>Al client forcem les directives del domini i busquem RAZVAN-CA entre les entitats arrel de confiança.</p>
+<pre><code class="language-powershell">gpupdate /force
+Get-ChildItem Cert:\LocalMachine\Root | Where-Object Subject -like &quot;*RAZVAN*&quot; | Format-List Subject, Issuer, NotAfter
+</code></pre>
+<img width="800" alt="captura2c" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura2c.png" /><p>El subjecte i l&#39;emissor són el mateix (<code>CN=RAZVAN-CA, DC=razvan, DC=local</code>) perquè és l&#39;arrel, i caduca d&#39;aquí a 5 anys.</p>
+<p>També ho comprovem a la consola <code>certlm.msc</code>, a <strong>Entidades de certificación raíz de confianza › Certificados</strong>.</p>
+<img width="800" alt="captura2b_client" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura2b_client.png" /><p>Ningú ha instal·lat RAZVAN-CA a mà al client: ha arribat sola des d&#39;Active Directory. Per això, tot el que signi RAZVAN-CA serà de confiança dins del domini.</p>
+<hr>
+<h3>Pas 4: Publiquem la web del centre de control (Nivell 2)</h3>
+<p>Al DNS del servidor creem el registre <code>control</code> (tipus A) que apunta a <code>192.168.56.18</code>, instal·lem IIS i hi posem la web.</p>
+<pre><code class="language-powershell">Add-DnsServerResourceRecordA -ZoneName razvan.local -Name control -IPv4Address 192.168.56.18
+Install-WindowsFeature Web-Server -IncludeManagementTools
+</code></pre>
+<p>La pàgina <code>C:\inetpub\wwwroot\index.html</code> mostra el <strong>Centre de control RAZVAN</strong>.</p>
+<p>Al client obrim Edge i anem a <code>http://control.razvan.local</code>.</p>
+<img width="800" alt="captura3" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura3.png" /><p>La web funciona, però a l&#39;esquerra de l&#39;adreça surt <strong>No seguro</strong>: tot viatja en clar per la xarxa.</p>
+<p>Si l&#39;obrim també amb <code>http://192.168.56.18</code> i <code>http://dc01.razvan.local</code>, surt la mateixa web: són tres noms per al mateix servidor.</p>
+<img width="800" alt="captura3b" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura3b.png" /><hr>
+<h3>Pas 5: El cadenat de pega (Nivell 3)</h3>
+<p>Al servidor fabriquem un certificat autosignat per a <code>control.razvan.local</code> i l&#39;afegim a IIS amb un enllaç <code>https</code> pel port 443.</p>
+<pre><code class="language-powershell">New-SelfSignedCertificate -DnsName control.razvan.local -CertStoreLocation Cert:\LocalMachine\My -FriendlyName &quot;Cadenat de pega&quot;
+</code></pre>
+<p>Al client obrim una finestra <strong>InPrivate</strong> d&#39;Edge i anem a <code>https://control.razvan.local</code>.</p>
+<img width="800" alt="captura4" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura4.png" /><p>Edge no mostra la web i dona l&#39;error <strong><code>NET::ERR_CERT_AUTHORITY_INVALID</code></strong>: el certificat l&#39;ha signat una autoritat en què no confia (ell mateix).</p>
+<p>Per veure-ho encara més clar, fabriquem un certificat fals per a <code>www.google.com</code> i llistem els certificats de l&#39;equip.</p>
+<pre><code class="language-powershell">New-SelfSignedCertificate -DnsName www.google.com -CertStoreLocation Cert:\LocalMachine\My -FriendlyName &quot;Google de mentida&quot;
+Get-ChildItem Cert:\LocalMachine\My | Format-Table FriendlyName, Subject, Issuer -AutoSize
+</code></pre>
+<img width="800" alt="captura4b" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura4b.png" /><p>Als certificats autosignats el subjecte i l&#39;emissor són el mateix. Qualsevol pot fabricar-ne un amb qualsevol nom, i per això no serveixen. Després l&#39;esborrem.</p>
+<hr>
+<h3>Pas 6: Creem la plantilla WebServer-SAN (Nivell 4)</h3>
+<p>Dupliquem la plantilla <strong>Servidor web</strong> com a <strong>WebServer-SAN</strong>, amb aquestes opcions:</p>
+<ul>
+<li>Validesa de <strong>2 anys</strong>.</li>
+<li>Nom del subjecte <strong>proporcionat pel sol·licitant</strong> (el posarem nosaltres a la sol·licitud).</li>
+<li><strong>Equipos del dominio</strong>: permís de llegir i inscriure&#39;s.</li>
+<li><strong>Admins. del dominio</strong>: permís de llegir, escriure i inscriure&#39;s.</li>
+</ul>
+<p>Després la publiquem a RAZVAN-CA perquè la pugui fer servir.</p>
+<pre><code class="language-powershell">certutil -SetCATemplates +WebServer-SAN
+</code></pre>
+<img width="800" alt="captura5" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura5.png" /><p>A <strong>Plantillas de certificado</strong> de <code>certsrv.msc</code> ja surt <strong>WebServer-SAN</strong>, amb el propòsit <strong>Autenticación del servidor</strong>: el certificat serveix per identificar un servidor, no per signar scripts.</p>
+<hr>
+<h3>Pas 7: Demanem el certificat oficial (Nivell 5)</h3>
+<p>Al servidor creem la carpeta <code>C:\certs</code> i el fitxer <code>web.inf</code> amb la recepta del certificat.</p>
+<pre><code class="language-ini">[Version]
+Signature=&quot;$Windows NT$&quot;
+
+[NewRequest]
+Subject = &quot;CN=control.razvan.local&quot;
+FriendlyName = &quot;Cadenat oficial&quot;
+KeyLength = 2048
+KeySpec = 1
+KeyUsage = 0xa0
+MachineKeySet = TRUE
+SMIME = FALSE
+PrivateKeyArchive = FALSE
+UserProtected = FALSE
+UseExistingKeySet = FALSE
+ProviderName = &quot;Microsoft RSA SChannel Cryptographic Provider&quot;
+RequestType = PKCS10
+KeyAlgorithm = RSA
+
+[Extensions]
+2.5.29.17 = &quot;{text}&quot;
+_continue_ = &quot;dns=control.razvan.local&quot;
+
+[RequestAttributes]
+CertificateTemplate = WebServer-SAN
+</code></pre>
+<p>Creem la sol·licitud, l&#39;enviem a RAZVAN-CA i instal·lem el certificat que ens retorna.</p>
+<pre><code class="language-powershell">cd C:\certs
+certreq -new web.inf web.req
+certreq -submit -config &quot;DC01.razvan.local\RAZVAN-CA&quot; web.req web.cer
+certreq -accept web.cer
+</code></pre>
+<img width="800" alt="captura5c" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura5c.png" /><p>La sol·licitud surt com a <strong>Emitida</strong> i el certificat queda instal·lat, amb el nom DNS <code>control.razvan.local</code> i validesa de 2 anys.</p>
+<p>Comparem els dos certificats de la web.</p>
+<pre><code class="language-powershell">Get-ChildItem Cert:\LocalMachine\My | Where-Object Subject -eq &quot;CN=control.razvan.local&quot; | Format-List FriendlyName, Subject, Issuer, DnsNameList, NotAfter
+</code></pre>
+<img width="800" alt="captura6" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura6.png" /><p>Tenen el mateix nom i el mateix SAN. L&#39;única diferència és l&#39;<strong>emissor</strong>: el de pega se signa ell mateix i l&#39;oficial l&#39;ha signat <strong>RAZVAN-CA</strong>.</p>
+<hr>
+<h3>Pas 8: El cadenat oficial (Nivell 6)</h3>
+<p>A IIS canviem el certificat de l&#39;enllaç <code>https</code> del <strong>Default Web Site</strong> pel <strong>Cadenat oficial</strong>.</p>
+<p>Al client obrim una finestra InPrivate d&#39;Edge i tornem a <code>https://control.razvan.local</code>.</p>
+<img width="800" alt="captura7" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura7.png" /><p>Ara la web surt a la primera, sense cap avís, i en clicar el cadenat Edge diu <strong>La conexión es segura</strong>.</p>
+<p>Si obrim el certificat que serveix la web i mirem la <strong>Ruta de certificación</strong>, veiem la jerarquia: <strong>RAZVAN-CA</strong> a dalt i <strong>control.razvan.local</strong> a sota.</p>
+<img width="800" alt="captura7b" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura7b.png" /><p>Edge mostra el cadenat perquè es compleixen quatre coses alhora:</p>
+<ol>
+<li>El certificat l&#39;ha signat RAZVAN-CA.</li>
+<li>RAZVAN-CA és a la llista de confiança del client (pas 3).</li>
+<li>El nom de l&#39;adreça, <code>control.razvan.local</code>, surt al SAN.</li>
+<li>El certificat no ha caducat ni està revocat.</li>
+</ol>
+<p>Per últim, obrim <code>https://192.168.56.18</code>.</p>
+<img width="800" alt="captura7c" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura7c.png" /><p>Surt l&#39;error <strong><code>NET::ERR_CERT_COMMON_NAME_INVALID</code></strong>. El certificat és oficial, però la IP no surt al SAN (falla la condició 3). Per acceptar més noms, al <code>web.inf</code> es poden posar separats amb <code>&amp;</code>, per exemple <code>&quot;dns=control.razvan.local&amp;dns=dc01.razvan.local&quot;</code>.</p>
+<p>Al final fem una instantània de les dues màquines amb el nom <strong>Web amb HTTPS</strong>.</p>
+

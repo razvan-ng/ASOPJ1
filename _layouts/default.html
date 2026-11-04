@@ -36,8 +36,7 @@
 
       <nav class="site-nav" aria-label="Navegació principal">
         <a href="{{ '/' | relative_url }}"{% if page.url == '/' %} class="active"{% endif %}>Inici</a>
-        <a href="{{ '/tasca-linux/' | relative_url }}"{% if page.url contains 'tasca-linux' %} class="active"{% endif %}>Linux · systemd</a>
-        <a href="{{ '/tasca-windows/' | relative_url }}"{% if page.url contains 'tasca-windows' %} class="active"{% endif %}>Windows · NSSM</a>
+        <a href="{{ '/#tasques' | relative_url }}"{% if page.layout == 'tasca' %} class="active"{% endif %}>Tasques</a>
         <a href="https://github.com/razvan-ng/ASOPJ1" target="_blank" rel="noopener">GitHub ↗</a>
         <button type="button" class="theme-btn" id="theme-btn" aria-label="Canvia el tema" title="Canvia el tema">
           <span class="theme-ico">◐</span>

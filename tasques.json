@@ -23,5 +23,18 @@
     "subtitle": "Creació de serveis d'inici personalitzats a Windows amb NSSM, documentant la configuració i les proves realitzades a l'aula.",
     "card": "Creació i configuració de serveis d'inici personalitzats a Windows amb NSSM, amb la documentació de les proves fetes a l'aula.",
     "tags": ["NSSM", "serveis", "PowerShell"]
+  },
+  {
+    "folder": "centralització d'usuaris amb un AD",
+    "slug": "tasca-ad",
+    "order": 3,
+    "title": "Centralització d'usuaris amb un AD",
+    "kicker": "Windows Server · AD CS",
+    "sistema": "Windows Server",
+    "os": "windows",
+    "subtitle": "Entitat certificadora RAZVAN-CA integrada a Active Directory: plantilles, sol·licituds amb certreq i la web control.razvan.local amb HTTPS i cadenat oficial.",
+    "card": "Creació de l'entitat certificadora RAZVAN-CA al domini razvan.local, plantilla WebServer-SAN i certificat oficial per a la web del centre de control amb HTTPS.",
+    "tags": ["AD CS", "PKI", "IIS", "HTTPS"],
+    "files": ["00-teoria.md", "01-activitat.md"]
   }
 ]

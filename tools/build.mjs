@@ -50,6 +50,15 @@ function markdownToHtml(md) {
   });
 }
 
+// Les imatges relatives (p. ex. img/captura1.png) apunten a la carpeta de
+// l'activitat; la pàgina generada viu a /<slug>/, per això es prefixen amb
+// ../contingut/<carpeta>/.
+function fixRelativeSrc(html, folder) {
+  const base = '../contingut/' + encodeURIComponent(folder).replace(/'/g, '%27') + '/';
+  return html.replace(/(<img\b[^>]*?\ssrc=")(?![a-z][a-z0-9+.-]*:|\/|#)([^"]+)"/gi,
+    (_, pre, src) => `${pre}${base}${src}"`);
+}
+
 // Primer paràgraf de text pla (per a subtítols deduïts).
 function firstParagraph(md) {
   for (const block of stripFrontMatter(md).split(/\r?\n\r?\n/)) {
@@ -105,7 +114,7 @@ const tasks = folders.map(folder => {
     card: o.card || subtitle,
     tags: o.tags || [],
     order: o.order ?? 100,
-    bodyHtml: markdownToHtml(combined),
+    bodyHtml: fixRelativeSrc(markdownToHtml(combined), folder),
   };
 }).sort((a, b) => a.order - b.order || a.title.localeCompare(b.title, 'ca'));
 
