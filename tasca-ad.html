@@ -3,13 +3,14 @@ layout: tasca
 permalink: /tasca-ad/
 title: "Centralització d'usuaris amb un AD"
 kicker: "Windows Server · AD CS"
-subtitle: "Entitat certificadora RAZVAN-CA integrada a Active Directory: plantilles, sol·licituds amb certreq i la web control.razvan.local amb HTTPS i cadenat oficial."
+subtitle: "Entitat certificadora RAZVAN-CA integrada a Active Directory: web amb HTTPS i cadenat oficial, carnets digitals per signar scripts i revocació amb CRL."
 sistema: "Windows Server"
 tags:
   - "AD CS"
   - "PKI"
-  - "IIS"
   - "HTTPS"
+  - "Signatura"
+  - "CRL"
 description: "Centralització d'usuaris amb un AD — ASOPJ1"
 ---
 <!-- Pàgina generada automàticament per tools/build.mjs a partir dels .md de
@@ -314,4 +315,144 @@ certreq -accept web.cer
 <p>Per últim, en una finestra InPrivate obrim els altres dos noms del servidor: <code>https://192.168.56.18</code> i <code>https://dc01.razvan.local</code>.</p>
 <img width="800" alt="captura7c" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura7c.png" /><img width="800" alt="captura7d" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura7d.png" /><p>En tots dos surt l&#39;error <strong><code>NET::ERR_CERT_COMMON_NAME_INVALID</code></strong>. El certificat és oficial, però ni la IP ni <code>dc01.razvan.local</code> surten al SAN (falla la condició 3). Per acceptar més noms, al <code>web.inf</code> es poden posar separats amb <code>&amp;</code>, per exemple <code>&quot;dns=control.razvan.local&amp;dns=dc01.razvan.local&quot;</code>.</p>
 <p>Al final fem una instantània de les dues màquines amb el nom <strong>Web amb HTTPS</strong>.</p>
+<h2>7. Activitat Pràctica (2a part): Carnets digitals per a l&#39;equip</h2>
+<h3>🎯 Objectiu de l&#39;activitat</h3>
+<ol>
+<li>Crear els usuaris de l&#39;equip i el grup <strong>Enginyers</strong> a Active Directory.</li>
+<li>Crear la plantilla <strong>SignaturaScripts</strong> perquè només els enginyers puguin demanar un certificat de signatura de codi.</li>
+<li>Fer que la Lia signi un script de PowerShell i veure com Windows bloqueja l&#39;script quan algú el modifica.</li>
+<li>Revocar el certificat d&#39;un treballador que marxa i publicar la <strong>CRL</strong>.</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Usuari</th>
+<th>Nom complet</th>
+<th>Grup Enginyers</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>lia</code></td>
+<td>Lia Ferré</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td><code>max</code></td>
+<td>Max Roig</td>
+<td>Sí</td>
+</tr>
+<tr>
+<td><code>teo</code></td>
+<td>Teo Bosch</td>
+<td>No</td>
+</tr>
+</tbody></table>
+<p>La contrasenya dels tres usuaris és <code>Razvan.2026</code>. Abans de començar fem una instantània de les dues màquines (<strong>Abans carnets</strong>).</p>
+<hr>
+<h3>Pas 9: L&#39;equip a Active Directory (Nivell 7)</h3>
+<p>Al servidor creem la unitat organitzativa <strong>Razvan</strong> i, a dins, els usuaris i el grup global de seguretat <strong>Enginyers</strong>, amb la Lia i en Max com a membres.</p>
+<pre><code class="language-powershell">New-ADOrganizationalUnit -Name &quot;Razvan&quot; -Path &quot;DC=razvan,DC=local&quot;
+$pw = ConvertTo-SecureString &quot;Razvan.2026&quot; -AsPlainText -Force
+New-ADUser -Name &quot;Lia Ferré&quot; -SamAccountName lia -UserPrincipalName lia@razvan.local -Path &quot;OU=Razvan,DC=razvan,DC=local&quot; -AccountPassword $pw -Enabled $true
+New-ADUser -Name &quot;Max Roig&quot; -SamAccountName max -UserPrincipalName max@razvan.local -Path &quot;OU=Razvan,DC=razvan,DC=local&quot; -AccountPassword $pw -Enabled $true
+New-ADUser -Name &quot;Teo Bosch&quot; -SamAccountName teo -UserPrincipalName teo@razvan.local -Path &quot;OU=Razvan,DC=razvan,DC=local&quot; -AccountPassword $pw -Enabled $true
+New-ADGroup -Name &quot;Enginyers&quot; -GroupScope Global -GroupCategory Security -Path &quot;OU=Razvan,DC=razvan,DC=local&quot;
+Add-ADGroupMember -Identity &quot;Enginyers&quot; -Members lia, max
+</code></pre>
+<img width="800" alt="captura7a_usuaris" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura7a_usuaris.png" /><p>A <strong>Usuarios y equipos de Active Directory</strong>, dins de l&#39;OU <strong>Razvan</strong>, hi ha el grup <strong>Enginyers</strong> i els tres usuaris.</p>
+<hr>
+<h3>Pas 10: La plantilla SignaturaScripts</h3>
+<p>A <code>certtmpl.msc</code> dupliquem la plantilla <strong>Firma de código</strong> i li posem el nom <strong>SignaturaScripts</strong>. A la pestanya <strong>General</strong> deixem la validesa d&#39;<strong>1 any</strong>.</p>
+<img width="800" alt="captura7b_general" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura7b_general.png" /><p>A <strong>Nombre del sujeto</strong> deixem <strong>Construido a partir de esta información de Active Directory</strong>, amb el format <strong>Nombre común</strong>, sense el correu electrònic i amb el <strong>Nombre principal de usuario (UPN)</strong>. El nom del certificat el posa Active Directory a partir del compte, i així ningú pot demanar un carnet amb el nom d&#39;una altra persona. Traiem el correu perquè els usuaris no en tenen i la sol·licitud fallaria.</p>
+<img width="800" alt="captura7b_subjecte" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura7b_subjecte.png" /><p>A <strong>Seguridad</strong> afegim el grup <strong>Enginyers</strong> amb permís de <strong>Leer</strong> i <strong>Inscribirse</strong>.</p>
+<img width="800" alt="captura7b_seguretat" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura7b_seguretat.png" /><p>Finalment la publiquem a RAZVAN-CA (<strong>Plantillas de certificado › Nuevo › Plantilla de certificado para emitir</strong>).</p>
+<hr>
+<h3>Pas 11: La Lia demana el seu carnet</h3>
+<p>Al client entrem com <code>RAZVAN\lia</code>. Obrim <code>certmgr.msc</code> (a dalt diu <strong>Certificados - Usuario actual</strong>: són els certificats de la Lia, no els de l&#39;equip) i a <strong>Personal › Todas las tareas › Solicitar un nuevo certificado...</strong> avancem fins a la llista de plantilles. Marquem només <strong>SignaturaScripts</strong>.</p>
+<img width="800" alt="captura8a_assistent" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura8a_assistent.png" /><p>Prem <strong>Inscribir</strong> i la inscripció acaba amb l&#39;estat <strong>Correcto</strong>.</p>
+<img width="800" alt="captura8a_inscrit" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura8a_inscrit.png" /><p>A <strong>Personal › Certificados</strong> obrim el certificat nou.</p>
+<img width="800" alt="captura8" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura8.png" /><p>Està emès per a <strong>Lia Ferré</strong>, l&#39;emissor és <strong>RAZVAN-CA</strong>, el propòsit és la firma de codi (<em>confirma que el software procede de un editor</em> i <em>protege el software de alteraciones</em>), és vàlid durant 1 any i a baix diu <strong>Tiene una clave privada correspondiente a este certificado</strong>. La clau privada s&#39;ha creat a l&#39;ordinador de la Lia i no ha viatjat mai fins a la CA.</p>
+<p>Després entrem com <code>RAZVAN\max</code> i fem el mateix perquè en Max també tingui el seu carnet.</p>
+<img width="800" alt="captura8d_max" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura8d_max.png" /><hr>
+<h3>Pas 12: En Teo no pot demanar el carnet</h3>
+<p>Entrem com <code>RAZVAN\teo</code> i obrim el mateix assistent. <strong>SignaturaScripts no surt</strong>: només hi ha EFS básico i Usuario.</p>
+<img width="800" alt="captura8b_teo" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura8b_teo.png" /><p>Marquem <strong>Mostrar todas las plantillas</strong>. Al costat de <strong>SignaturaScripts</strong> diu <strong>No disponible</strong>: <em>los permisos en la plantilla de certificado no permiten al usuario actual inscribirse</em>. En Teo no és del grup Enginyers. Cancel·lem l&#39;assistent.</p>
+<img width="800" alt="captura8b" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura8b.png" /><hr>
+<h3>Pas 13: L&#39;script del satèl·lit (Nivell 8)</h3>
+<p>Entrem com <code>RAZVAN\lia</code>, obrim Windows PowerShell normal (sense administrador) i creem l&#39;script.</p>
+<pre><code class="language-powershell">mkdir $HOME\missio
+cd $HOME\missio
+New-Item control.ps1 -ItemType File
+notepad control.ps1
+</code></pre>
+<pre><code class="language-powershell"># Control del satel.lit RAZVAN-1 - razvan.local
+$altitud = 550
+Write-Host &quot;RAZVAN-1 en orbita a $altitud km&quot; -ForegroundColor Green
+Write-Host &quot;Tots els sistemes funcionen correctament&quot;
+</code></pre>
+<img width="800" alt="captura8c_script" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura8c_script.png" /><blockquote>
+<p><strong>Compte:</strong> al Bloc de notes en castellà, desar és <strong>Ctrl+G</strong>, no Ctrl+S.</p>
+</blockquote>
+<hr>
+<h3>Pas 14: Només scripts signats</h3>
+<p>Mirem la política d&#39;execució i provem l&#39;script.</p>
+<pre><code class="language-powershell">Get-ExecutionPolicy
+.\control.ps1
+</code></pre>
+<img width="800" alt="captura9a_restricted" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura9a_restricted.png" /><p>La política és <strong>Restricted</strong>: a Windows 10 PowerShell no executa cap script si no li diem el contrari.</p>
+<p>Fem que, per a la Lia, només s&#39;executin els scripts signats, i confirmem amb <strong>S</strong>.</p>
+<pre><code class="language-powershell">Set-ExecutionPolicy AllSigned -Scope CurrentUser
+.\control.ps1
+</code></pre>
+<img width="800" alt="captura9a_allsigned" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura9a_allsigned.png" /><p>Ara la Lia té <strong>AllSigned</strong> (només a <code>CurrentUser</code>) i l&#39;error és un altre: l&#39;script <strong>no està signat digitalment</strong>.</p>
+<hr>
+<h3>Pas 15: La Lia signa l&#39;script</h3>
+<p>Agafem el carnet de signatura de la Lia, signem l&#39;script i l&#39;executem.</p>
+<pre><code class="language-powershell">$cert = Get-ChildItem Cert:\CurrentUser\My -CodeSigningCert
+$cert
+Set-AuthenticodeSignature -FilePath .\control.ps1 -Certificate $cert
+.\control.ps1
+</code></pre>
+<img width="800" alt="captura9a_signat" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura9a_signat.png" /><p>La signatura queda <strong>Valid</strong>. PowerShell pregunta si volem executar programari de l&#39;editor <strong>CN=Lia Ferré</strong>, que encara no és de confiança. Triem <strong>[E] Ejecutar siempre</strong>, que afegeix el certificat de la Lia a <strong>Editores de confianza</strong>, i l&#39;script s&#39;executa: <strong>RAZVAN-1 en orbita a 550 km</strong>, en verd.</p>
+<p>Si obrim l&#39;script, al final hi ha un bloc nou entre <code># SIG # Begin signature block</code> i <code># SIG # End signature block</code>. És la signatura.</p>
+<img width="800" alt="captura9a_bloc" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura9a_bloc.png" /><hr>
+<h3>Pas 16: El sabotatge</h3>
+<p>Fem de saboteador: obrim l&#39;script, canviem <strong>550</strong> per <strong>0</strong> i desem. No toquem res més.</p>
+<img width="800" alt="captura9c_sabotatge" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura9c_sabotatge.png" /><p>Executem l&#39;script sabotejat i mirem l&#39;estat de la signatura.</p>
+<pre><code class="language-powershell">.\control.ps1
+Get-AuthenticodeSignature .\control.ps1
+</code></pre>
+<img width="800" alt="captura9" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura9.png" /><p>PowerShell no executa l&#39;script perquè <strong>el hash del fitxer no coincideix amb el hash emmagatzemat a la signatura digital</strong>, i <code>Get-AuthenticodeSignature</code> diu <strong>HashMismatch</strong>. La signatura guarda un resum del contingut xifrat amb la clau privada de la Lia: en canviar una sola xifra el resum ja no coincideix. El saboteador tampoc el pot tornar a signar, perquè no té la clau privada de la Lia.</p>
+<p>Tornem a posar l&#39;altitud a <strong>550</strong>, la Lia signa l&#39;script de nou i comprovem que torna a funcionar i que l&#39;estat és <strong>Valid</strong>.</p>
+<pre><code class="language-powershell">Set-AuthenticodeSignature -FilePath .\control.ps1 -Certificate $cert
+.\control.ps1
+Get-AuthenticodeSignature .\control.ps1
+</code></pre>
+<img width="800" alt="captura9b" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura9b.png" /><hr>
+<h3>Pas 17: L&#39;acomiadament d&#39;en Max (Nivell 9)</h3>
+<p>En Max marxa de l&#39;empresa amb el portàtil, i el seu carnet és vàlid un any més. A <code>certsrv.msc</code>, a <strong>Certificados emitidos</strong>, busquem la fila de <code>RAZVAN\max</code> amb la plantilla <strong>SignaturaScripts</strong> i ens apuntem el número de sèrie (<code>3300000005bdd9a6…</code>).</p>
+<img width="800" alt="captura10a_emesos" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura10a_emesos.png" /><p>Botó dret › <strong>Todas las tareas › Revocar certificado</strong>. Com a <strong>Código de motivo</strong> triem <strong>Cambio de afiliación</strong> (la persona ja no és de l&#39;empresa) i premem <strong>Sí</strong>.</p>
+<img width="800" alt="captura10a_revocar" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura10a_revocar.png" /><p>El certificat d&#39;en Max passa a <strong>Certificados revocados</strong>, amb la data i el motiu de la revocació.</p>
+<img width="800" alt="captura10a_revocats" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura10a_revocats.png" /><hr>
+<h3>Pas 18: Publicar la llista negra (CRL)</h3>
+<p>Botó dret sobre <strong>Certificados revocados › Todas las tareas › Publicar</strong>, triem <strong>Nueva CRL</strong> i acceptem.</p>
+<img width="800" alt="captura10a_publicar" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura10a_publicar.png" /><p>A <code>C:\Windows\System32\CertSrv\CertEnroll</code> hi ha el certificat de la CA (<code>.crt</code>) i les CRL (<code>RAZVAN-CA.crl</code> i la delta <code>RAZVAN-CA+.crl</code>).</p>
+<img width="800" alt="captura10a_certenroll" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura10a_certenroll.png" /><p>Obrim <code>RAZVAN-CA.crl</code>. A la pestanya <strong>General</strong> l&#39;emissor és RAZVAN-CA i la <strong>Próxima actualización</strong> és d&#39;aquí a una setmana: la CRL també caduca i la CA en publica una de nova periòdicament.</p>
+<img width="800" alt="captura10a_crl_general" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura10a_crl_general.png" /><p>A la pestanya <strong>Lista de revocaciones</strong> hi ha el número de sèrie d&#39;en Max, el mateix que ens havíem apuntat. En seleccionar-lo veiem la data de revocació i el motiu: <strong>La afiliación ha cambiado (3)</strong>.</p>
+<img width="800" alt="captura10" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura10.png" /><p>Un certificat no es pot «desfer». La CA publica la CRL, una llista negra signada amb els números de sèrie revocats, i els equips la consulten abans de confiar en un certificat. Un equip que ja tenia la CRL anterior no en baixa una de nova fins a la <strong>Próxima actualización</strong>, i per això les CA reals publiquen CRL curtes o fan servir OCSP.</p>
+<hr>
+<h3>Pas 19: Clau compromesa</h3>
+<p>La Lia ha perdut el portàtil. Revoquem el seu certificat amb el motiu <strong>Compromiso clave</strong> i publiquem una CRL nova. Ho fem per PowerShell, que és l&#39;equivalent del que hem fet amb la consola:</p>
+<pre><code class="language-powershell">certutil -revoke 3300000004a8f4302856c9349a000000000004 1
+certutil -CRL
+</code></pre>
+<img width="800" alt="captura10b_revocats" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura10b_revocats.png" /><p>Ara a <strong>Certificados revocados</strong> hi ha els dos: el de la Lia per <strong>Compromiso clave</strong> i el d&#39;en Max per <strong>Cambio de afiliación</strong>.</p>
+<p>Al client, la Lia demana un carnet nou amb el mateix assistent de <code>certmgr.msc</code>. Ara té dos certificats de signatura, i per signar agafem el més nou.</p>
+<pre><code class="language-powershell">$cert = Get-ChildItem Cert:\CurrentUser\My -CodeSigningCert | Sort-Object NotBefore | Select-Object -Last 1
+Set-AuthenticodeSignature -FilePath .\control.ps1 -Certificate $cert
+.\control.ps1
+Get-AuthenticodeSignature .\control.ps1 | Format-List Status, SignerCertificate
+</code></pre>
+<img width="800" alt="captura10b" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura10b.png" /><p>Com que el certificat és nou, PowerShell torna a preguntar si confiem en l&#39;editor i triem <strong>Ejecutar siempre</strong>. L&#39;script funciona amb l&#39;altitud a <strong>550</strong> i la signatura és <strong>Valid</strong>, feta amb el carnet nou emès per RAZVAN-CA (número de sèrie acabat en <code>0006</code>).</p>
+<p>Al final fem una instantània de les dues màquines amb el nom <strong>Carnets</strong>.</p>
 
