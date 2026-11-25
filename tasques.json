@@ -44,19 +44,21 @@
     "kicker": "Windows Server · AD CS",
     "sistema": "Windows Server",
     "os": "windows",
-    "subtitle": "Entitat certificadora RAZVAN-CA integrada a Active Directory: web amb HTTPS i cadenat oficial, carnets digitals per signar scripts i revocació amb CRL.",
-    "card": "Entitat certificadora RAZVAN-CA al domini razvan.local: certificat oficial per a la web amb HTTPS, carnets digitals per signar scripts de PowerShell i revocació de certificats amb CRL.",
+    "subtitle": "Entitat certificadora RAZVAN-CA integrada a Active Directory: web amb HTTPS i cadenat oficial, carnets digitals per signar scripts, revocació amb CRL i una VPN SSTP per treballar des de casa.",
+    "card": "Entitat certificadora RAZVAN-CA al domini razvan.local: certificat oficial per a la web amb HTTPS, carnets digitals per signar scripts de PowerShell, revocació amb CRL i VPN SSTP des de casa.",
     "tags": [
       "AD CS",
       "PKI",
       "HTTPS",
       "Signatura",
-      "CRL"
+      "CRL",
+      "VPN"
     ],
     "files": [
       "00-teoria.md",
       "01-activitat.md",
-      "02-carnets-digitals.md"
+      "02-carnets-digitals.md",
+      "03-vpn.md"
     ]
   }
 ]

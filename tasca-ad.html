@@ -3,7 +3,7 @@ layout: tasca
 permalink: /tasca-ad/
 title: "Centralització d'usuaris amb un AD"
 kicker: "Windows Server · AD CS"
-subtitle: "Entitat certificadora RAZVAN-CA integrada a Active Directory: web amb HTTPS i cadenat oficial, carnets digitals per signar scripts i revocació amb CRL."
+subtitle: "Entitat certificadora RAZVAN-CA integrada a Active Directory: web amb HTTPS i cadenat oficial, carnets digitals per signar scripts, revocació amb CRL i una VPN SSTP per treballar des de casa."
 sistema: "Windows Server"
 tags:
   - "AD CS"
@@ -11,6 +11,7 @@ tags:
   - "HTTPS"
   - "Signatura"
   - "CRL"
+  - "VPN"
 description: "Centralització d'usuaris amb un AD — ASOPJ1"
 ---
 <!-- Pàgina generada automàticament per tools/build.mjs a partir dels .md de
@@ -455,4 +456,136 @@ Get-AuthenticodeSignature .\control.ps1 | Format-List Status, SignerCertificate
 </code></pre>
 <img width="800" alt="captura10b" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura10b.png" /><p>Com que el certificat és nou, PowerShell torna a preguntar si confiem en l&#39;editor i triem <strong>Ejecutar siempre</strong>. L&#39;script funciona amb l&#39;altitud a <strong>550</strong> i la signatura és <strong>Valid</strong>, feta amb el carnet nou emès per RAZVAN-CA (número de sèrie acabat en <code>0006</code>).</p>
 <p>Al final fem una instantània de les dues màquines amb el nom <strong>Carnets</strong>.</p>
+<h2>8. Activitat Pràctica (3a part): La VPN de l&#39;oficina</h2>
+<h3>🎯 Objectiu de l&#39;activitat</h3>
+<ol>
+<li>Afegir un tercer servidor, <strong>VPN-RAZVAN</strong>, amb una targeta a l&#39;oficina i una altra a «Internet».</li>
+<li>Donar-li un certificat <strong>vpn.razvan.local</strong> emès per RAZVAN-CA amb la plantilla <strong>WebServer-SAN</strong>.</li>
+<li>Configurar una VPN <strong>SSTP</strong> amb <em>Enrutamiento y acceso remoto</em> i donar permís només a la Lia.</li>
+<li>Portar el client a «casa» i entrar a la web del centre de control a través del túnel.</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Màquina</th>
+<th>Paper</th>
+<th>Adreces</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>DC01</code></td>
+<td>Controlador de domini, DNS i RAZVAN-CA</td>
+<td><code>192.168.56.18</code></td>
+</tr>
+<tr>
+<td><code>VPN-RAZVAN</code></td>
+<td>Servidor VPN</td>
+<td>Interna <code>192.168.56.10</code> · Externa <code>203.0.113.1</code></td>
+</tr>
+<tr>
+<td>Client Windows 10</td>
+<td>Ordinador de la Lia</td>
+<td>Oficina per DHCP · «A casa» <code>203.0.113.50</code></td>
+</tr>
+</tbody></table>
+<p>La xarxa de l&#39;oficina és la xarxa <em>només amfitrió</em> de VirtualBox (<code>192.168.56.0/24</code>) i «Internet» és una <strong>xarxa interna</strong> de VirtualBox anomenada <code>Internet</code> (<code>203.0.113.0/24</code>). Abans de començar fem una instantània del servidor i del client (<strong>Abans VPN</strong>).</p>
+<hr>
+<h3>Pas 20: La porta del darrere (Nivell 10)</h3>
+<p>Creem la màquina <strong>VPN-RAZVAN</strong> a partir de l&#39;OVA de Windows Server 2022. Com que és una còpia, abans d&#39;unir-la al domini la generalitzem amb <code>sysprep /generalize</code>, perquè tingui un SID nou i no xoqui amb el del controlador de domini.</p>
+<p>Li posem dues targetes. La primera la renombrem <strong>Interna</strong> i va a l&#39;oficina, amb l&#39;adreça fixa <code>192.168.56.10</code> i el DNS del controlador de domini (<code>192.168.56.18</code>).</p>
+<img width="800" alt="captura11_interna" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura11_interna.png" /><p>La segona la renombrem <strong>Externa</strong> i va connectada a la xarxa <code>Internet</code> amb l&#39;adreça <code>203.0.113.1/24</code>, <strong>sense porta d&#39;enllaç i sense DNS</strong>. Si li poséssim DNS, el servidor intentaria preguntar a Internet pels noms del domini.</p>
+<img width="800" alt="captura11_externa" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura11_externa.png" /><p>Després la unim al domini <code>razvan.local</code> i reiniciem. Per comprovar que està dins del domini, obrim <code>\\dc01.razvan.local</code> a l&#39;explorador i veiem les carpetes compartides <strong>NETLOGON</strong> i <strong>SYSVOL</strong>.</p>
+<img width="800" alt="captura11" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura11.png" /><h4>Repte 10</h4>
+<p>A la consola <strong>DNS</strong> del controlador de domini, la zona <code>razvan.local</code> té el registre <strong>VPN-RAZVAN</strong> apuntant només a <code>192.168.56.10</code>. No hi ha cap registre amb <code>203.0.113.1</code>, perquè la targeta externa no es registra al DNS. Si hi fos, els equips de l&#39;oficina podrien intentar arribar a la VPN per una adreça que no poden fer servir.</p>
+<img width="800" alt="captura11b" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura11b.png" /><hr>
+<h3>Pas 21: El certificat de la porta (Nivell 11)</h3>
+<p>A VPN-RAZVAN obrim <code>certlm.msc</code> (<strong>Certificados - Equipo local</strong>), perquè el certificat és de l&#39;equip i no d&#39;un usuari. A <strong>Personal › Todas las tareas › Solicitar un nuevo certificado...</strong> triem la plantilla <strong>WebServer-SAN</strong> que vam crear a la 1a part i omplim:</p>
+<table>
+<thead>
+<tr>
+<th>Camp</th>
+<th>Valor</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Nombre común</td>
+<td><code>vpn.razvan.local</code></td>
+</tr>
+<tr>
+<td>Nombre alternativo (DNS)</td>
+<td><code>vpn.razvan.local</code></td>
+</tr>
+<tr>
+<td>Nombre descriptivo</td>
+<td><code>Porta VPN</code></td>
+</tr>
+</tbody></table>
+<p>A <strong>Personal › Certificados</strong> hi ha el certificat <strong>vpn.razvan.local</strong>, emès per <strong>RAZVAN-CA</strong>, amb el propòsit <strong>Autenticación del servidor</strong> i la plantilla <strong>WebServer-SAN</strong>.</p>
+<img width="800" alt="captura12_certlm" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura12_certlm.png" /><p>A la pestanya <strong>Detalles</strong>, el camp <strong>Nombre alternativo del titular</strong> diu <code>Nombre DNS=vpn.razvan.local</code>. És el nom amb què el client es connectarà i és el que comprovarà.</p>
+<img width="800" alt="captura12" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura12.png" /><h4>Repte 11</h4>
+<p>Al controlador de domini, a <code>certsrv.msc › Certificados emitidos</code>, es veuen els dos certificats fets amb la plantilla <strong>WebServer-SAN</strong>: el de la web del centre de control de la 1a part i el de <code>VPN-RAZVAN</code>. La mateixa plantilla serveix per a qualsevol servidor que necessiti un certificat amb nom alternatiu, i no cal fer-ne una de nova per a cada màquina.</p>
+<img width="800" alt="captura12b" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura12b.png" /><hr>
+<h3>Pas 22: Obrir la porta (Nivell 12)</h3>
+<p>A VPN-RAZVAN instal·lem el rol <strong>Acceso remoto</strong> amb el servei <strong>DirectAccess y VPN (RAS)</strong>. Després obrim <strong>Enrutamiento y acceso remoto</strong>, fem <strong>Configurar y habilitar Enrutamiento y acceso remoto</strong> i triem <strong>Configuración personalizada › Acceso VPN</strong>. Ho hem fet amb PowerShell, que fa el mateix:</p>
+<pre><code class="language-powershell">Install-WindowsFeature RemoteAccess, DirectAccess-VPN -IncludeManagementTools
+Install-RemoteAccess -VpnType Vpn -Legacy
+Set-VpnIPAddressAssignment -IPAddressRange &quot;192.168.56.200&quot;,&quot;192.168.56.220&quot; -Type StaticPool
+Set-RemoteAccess -SslCertificate (Get-ChildItem Cert:\LocalMachine\My | ? Subject -eq &quot;CN=vpn.razvan.local&quot;)
+</code></pre>
+<p>Les adreces del grup estàtic (<code>192.168.56.200</code> a <code>.220</code>) són de l&#39;oficina però estan fora del rang de DHCP de la xarxa (<code>.3</code> a <code>.199</code>), perquè no es trepitgin.</p>
+<p>A les <strong>Propiedades</strong> del servidor, pestanya <strong>Seguridad</strong>, l&#39;autenticació és <strong>Autenticación de Windows</strong> (els usuaris d&#39;Active Directory) i, a <strong>Enlace de certificado SSL</strong>, el certificat és <strong>vpn.razvan.local</strong>. És el certificat que ensenyarà el servidor quan algú s&#39;hi connecti per SSTP (HTTPS pel port 443).</p>
+<img width="800" alt="captura13_seguretat" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura13_seguretat.png" /><p>A la pestanya <strong>IPv4</strong> hi ha el <strong>Conjunto de direcciones estáticas</strong> i, a baix, triem l&#39;<strong>Adaptador</strong> <strong>Interna</strong>. Així els clients de la VPN reben el DNS de l&#39;oficina.</p>
+<img width="800" alt="captura13_ipv4" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura13_ipv4.png" /><p>Ara VPN-RAZVAN surt <strong>en verd</strong> a la consola: el servei està en marxa.</p>
+<img width="800" alt="captura13" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura13.png" /><p>Al controlador de domini donem permís a la Lia. A <strong>Usuarios y equipos de Active Directory</strong>, a les propietats de <strong>Lia Ferré</strong>, pestanya <strong>Marcado</strong>, marquem <strong>Permitir acceso</strong>. En Teo es queda amb <strong>Controlar acceso a través de la directiva de red NPS</strong>, que per defecte vol dir que no pot entrar.</p>
+<img width="800" alt="captura13_marcat" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura13_marcat.png" /><p>Perquè VPN-RAZVAN pugui llegir aquest permís ha de ser al grup <strong>Builtin › Servidores RAS e IAS</strong>. Hi és, i ho comprovem per PowerShell:</p>
+<pre><code class="language-powershell">Get-ADGroupMember &quot;Servidores RAS e IAS&quot; | Select-Object name
+# name
+# ----
+# VPN-RAZVAN
+</code></pre>
+<h4>Repte 12</h4>
+<p>A <strong>Puertos</strong> hi ha la llista de ports de VPN-RAZVAN. Cada port és una connexió que pot estar oberta alhora. Es veuen els ports <strong>WAN Miniport (SSTP)</strong>, i més avall hi ha els d&#39;<strong>IKEv2</strong>, <strong>L2TP</strong> i <strong>PPTP</strong>. A Windows Server 2022 PPTP i L2TP encara hi són, tot i que PPTP és insegur i no l&#39;hauríem de fer servir.</p>
+<img width="800" alt="captura13b" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura13b.png" /><hr>
+<h3>Pas 23: Preparar la motxilla (Nivell 13, part A)</h3>
+<p>Encara a l&#39;oficina, al client entrem com <code>RAZVAN\Administrador</code> i fem dues coses:</p>
+<ol>
+<li><p>Afegim aquesta línia al fitxer <code>C:\Windows\System32\drivers\etc\hosts</code>. A Internet això ho faria un DNS públic, però al laboratori ho fa el fitxer <code>hosts</code>.</p>
+<pre><code>203.0.113.1     vpn.razvan.local
+</code></pre>
+</li>
+<li><p>Creem el valor DWORD <code>NoCertRevocationCheck = 1</code> a <code>HKLM\SYSTEM\CurrentControlSet\Services\SstpSvc\Parameters</code>. Abans de connectar, el client vol comprovar a la CRL de RAZVAN-CA que el certificat de la VPN no està revocat, però la CRL és a dins de l&#39;oficina i des de casa no hi arriba fins que la VPN està connectada (l&#39;ou i la gallina). Sense aquest valor la connexió falla amb l&#39;error <code>0x80092013</code>.</p>
+</li>
+</ol>
+<img width="800" alt="captura14_motxilla" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura14_motxilla.png" /><hr>
+<h3>Pas 24: Cap a casa (Nivell 13, part B)</h3>
+<p>A VirtualBox canviem l&#39;adaptador 1 del client a <strong>Red interna</strong> amb el nom <code>Internet</code> i deixem desconnectat l&#39;adaptador de l&#39;oficina. Al client li posem l&#39;adreça <code>203.0.113.50/24</code>, sense porta d&#39;enllaç i sense DNS.</p>
+<p>Ara el client arriba a l&#39;adreça externa de VPN-RAZVAN (<code>203.0.113.1</code>) però <strong>no</strong> al controlador de domini (<code>192.168.56.18</code>). Ja és «a casa».</p>
+<img width="800" alt="captura14_casa" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura14_casa.png" /><hr>
+<h3>Pas 25: A casa, sense VPN (Nivell 13, part C)</h3>
+<p>Entrem al client com <code>RAZVAN\lia</code>. Windows ens deixa entrar encara que no vegi el controlador de domini, perquè recorda l&#39;última vegada que la Lia va entrar en aquest equip.</p>
+<p>A Edge obrim <code>https://vpn.razvan.local</code>. La pàgina diu <strong>404 Not Found</strong>, perquè VPN-RAZVAN no és una web, però a l&#39;esquerra de l&#39;adreça hi ha el <strong>cadenat</strong>: arribem al servidor pel port 443 i el seu certificat és bo, signat per RAZVAN-CA i amb el nom correcte.</p>
+<img width="800" alt="captura14_vpn_web" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura14_vpn_web.png" /><p>En canvi, <code>https://control.razvan.local</code> no funciona. Des de casa el centre de control no existeix.</p>
+<img width="800" alt="captura14_sense_vpn" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura14_sense_vpn.png" /><hr>
+<h3>Pas 26: Connectar-se (Nivell 13, part D)</h3>
+<p>Creem la connexió <strong>VPN Razvan</strong> amb el servidor <code>vpn.razvan.local</code> (el nom del certificat), el tipus <strong>SSTP</strong> i usuari i contrasenya. És el mateix que fer-ho a <strong>Configuración › Red e Internet › VPN › Agregar VPN</strong>:</p>
+<pre><code class="language-powershell">Add-VpnConnection -Name &quot;VPN Razvan&quot; -ServerAddress vpn.razvan.local -TunnelType Sstp -AuthenticationMethod MSChapv2 -EncryptionLevel Required -RememberCredential:$false -PassThru
+</code></pre>
+<img width="800" alt="captura14_crear_vpn" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura14_crear_vpn.png" /><p>Connectem amb l&#39;usuari <code>lia</code>, la contrasenya <code>Razvan.2026</code> i el domini <code>RAZVAN</code>.</p>
+<img width="800" alt="captura14_connectar" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura14_connectar.png" /><p>La connexió queda <strong>Connected</strong>. El client té ara dues adreces: la de casa (<code>203.0.113.50</code>) a la targeta <strong>Ethernet</strong> i una de l&#39;oficina (<code>192.168.56.201</code>) a la connexió <strong>VPN Razvan</strong>, que li ha donat VPN-RAZVAN del seu grup d&#39;adreces.</p>
+<img width="800" alt="captura14" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura14.png" /><p>Ara el nom <code>control.razvan.local</code> es resol amb el DNS de l&#39;oficina (<code>192.168.56.18</code>) i el port 443 respon <strong>a través de la interfície VPN Razvan</strong>.</p>
+<img width="800" alt="captura14_tunel" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura14_tunel.png" /><p>A Edge, <code>https://control.razvan.local</code> mostra el <strong>Centre de control RAZVAN</strong> amb el cadenat. La web viatja dins del túnel, des de l&#39;oficina fins al sofà de la Lia.</p>
+<img width="800" alt="captura14_web" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura14_web.png" /><p>Al servidor, a <strong>Clientes de acceso remoto</strong>, es veu <code>RAZVAN\lia</code> connectada.</p>
+<img width="800" alt="captura14_clients" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura14_clients.png" /><hr>
+<h3>Pas 27: El becari ho prova (Nivell 13, part E)</h3>
+<p>Desconnectem i tornem a connectar, ara amb l&#39;usuari <code>teo</code>. El certificat del servidor és bo i la contrasenya d&#39;en Teo també, però surt l&#39;<strong>error 812</strong>: una directiva del servidor VPN ha impedit la connexió. En Teo no té permís a la pestanya <strong>Marcado</strong>.</p>
+<img width="800" alt="captura14_teo" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura14_teo.png" /><blockquote>
+<p><strong>💡 Idea clau:</strong> La VPN fa dues comprovacions. El client comprova el servidor amb el certificat <code>vpn.razvan.local</code>, signat per RAZVAN-CA. El servidor comprova l&#39;usuari amb la contrasenya i el permís d&#39;Active Directory. Sense el certificat, la Lia podria estar donant la contrasenya a un impostor.</p>
+</blockquote>
+<h4>Repte 13: El nom importa</h4>
+<p>Creem una segona connexió, <strong>VPN per IP</strong>, igual que la primera però amb l&#39;adreça <code>203.0.113.1</code> en lloc del nom, i provem de connectar-nos amb la Lia.</p>
+<pre><code class="language-powershell">Add-VpnConnection -Name &quot;VPN per IP&quot; -ServerAddress 203.0.113.1 -TunnelType Sstp -AuthenticationMethod MSChapv2 -EncryptionLevel Required
+rasdial &quot;VPN per IP&quot; lia * /domain:RAZVAN
+</code></pre>
+<img width="800" alt="captura14b" src="../contingut/centralitzaci%C3%B3%20d%27usuaris%20amb%20un%20AD/img/captura14b.png" /><p>Falla amb <strong>El nombre CN del certificado no coincide con el valor pasado</strong>. És el mateix servidor i el mateix certificat, però el certificat diu <code>vpn.razvan.local</code> i al SAN no hi ha cap adreça IP. El client compara el nom al qual s&#39;ha connectat amb el del certificat i, com que no coincideixen, no es fia del servidor. És el mateix que passava al Pas 8 de la 1a part quan entràvem a la web per <code>https://192.168.56.18</code> (<code>NET::ERR_CERT_COMMON_NAME_INVALID</code>).</p>
+<p>Al final esborrem la connexió de prova i fem una instantània de les tres màquines (<strong>VPN nivell 13</strong>).</p>
 

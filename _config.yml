@@ -11,6 +11,7 @@ exclude:
   - "contingut/centralització d'usuaris amb un AD/00-teoria.md"
   - "contingut/centralització d'usuaris amb un AD/01-activitat.md"
   - "contingut/centralització d'usuaris amb un AD/02-carnets-digitals.md"
+  - "contingut/centralització d'usuaris amb un AD/03-vpn.md"
   - "contingut/contingut.md"
   - "contingut/targets i serveis personalitzats/00-teoria.md"
   - "contingut/targets i serveis personalitzats/01-activitat.md"
